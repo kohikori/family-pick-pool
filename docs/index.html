@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#14201a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261028b">
+<link rel="stylesheet" href="styles.css?v=20261028d">
 </head>
 <body>
 <div class="wrap">
@@ -33,20 +33,21 @@
   <main>
     <!-- ============ DASHBOARD ============ -->
     <section id="dashboard" data-page="dashboard">
-      <div class="tiles six">
+      <div class="tiles seven">
         <div class="tile lead"><span class="label">👑 Overall leader</span><span class="big" id="k-leader">–</span><span class="val" id="k-leader-val"></span><span class="sub" id="k-leader-sub"></span></div>
         <div class="tile"><span class="label" id="k-week-label">🏆 Week winner</span><span class="big" id="k-week">–</span><span class="val" id="k-week-val"></span><span class="sub" id="k-week-sub"></span></div>
         <div class="tile"><span class="label">🎯 Straight-up leader</span><span class="big" id="k-su">–</span><span class="val" id="k-su-val"></span><span class="sub" id="k-su-sub"></span></div>
         <div class="tile"><span class="label">📊 Spread specialist</span><span class="big" id="k-ats">–</span><span class="val" id="k-ats-val"></span><span class="sub" id="k-ats-sub"></span></div>
         <div class="tile"><span class="label">⚖️ Over/under leader</span><span class="big" id="k-ou">–</span><span class="val" id="k-ou-val"></span><span class="sub" id="k-ou-sub"></span></div>
         <div class="tile"><span class="label">⚡ Sweep king</span><span class="big" id="k-sw">–</span><span class="val" id="k-sw-val"></span><span class="sub" id="k-sw-sub"></span></div>
+        <div class="tile"><span class="label">📅 Most weeks won</span><span class="big" id="k-ww">–</span><span class="val" id="k-ww-val"></span><span class="sub" id="k-ww-sub"></span></div>
       </div>
 
-      <div class="grid-main">
+      <div class="stack">
         <div class="card">
           <h2>Power rankings &amp; form guide</h2>
           <div class="scroll"><table class="tbl" id="rank-table">
-            <thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>GB</th><th>Winners</th><th>Spreads</th><th>O/U</th><th>Sweeps</th><th>Accuracy</th><th class="form-h">Form</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>GB</th><th>Winners</th><th>Spreads</th><th>O/U</th><th>Sweeps</th><th>Wks won</th><th>Accuracy</th><th class="form-h">Form</th></tr></thead>
             <tbody></tbody>
           </table></div>
           <p class="note" id="scoring-note"></p>
@@ -54,6 +55,7 @@
 
         <div class="card">
           <h2>⚡ Single-week point record</h2>
+          <div class="record-wrap">
           <div class="record">
             <span class="label">👑 Record holder</span>
             <span class="big" id="r1">–</span>
@@ -68,12 +70,13 @@
             <thead><tr><th>Top weeks</th><th>Week</th><th>Points</th><th>Sweeps</th></tr></thead>
             <tbody></tbody>
           </table></div>
+          </div>
         </div>
       </div>
 
       <div class="card">
-        <h2>Points race</h2>
-        <p class="note">Running total after each week. Hover or tap for the numbers.</p>
+        <h2>Leadership &amp; rank progression</h2>
+        <p class="note">Each player's place in the standings after every week. 1st is at the top, so crossing lines are lead changes. Hover or tap a week for the points behind each rank.</p>
         <div class="chart" id="race"></div>
       </div>
     </section>
@@ -147,8 +150,8 @@
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="config.js?v=20261028b"></script>
-<script src="scoring.js?v=20261028b"></script>
-<script src="app.js?v=20261028b"></script>
+<script src="config.js?v=20261028d"></script>
+<script src="scoring.js?v=20261028d"></script>
+<script src="app.js?v=20261028d"></script>
 </body>
 </html>

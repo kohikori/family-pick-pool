@@ -96,3 +96,12 @@ main section { display: flex; flex-direction: column; gap: 16px; }
 #rank-table th:nth-child(2), #rank-table td:nth-child(2), #week-table th:nth-child(2), #week-table td:nth-child(2) { text-align: left; }
 #games-table th, #games-table td { text-align: left; }
 #games-table th:last-child, #games-table td:last-child { text-align: right; }
+
+.tiles.seven { grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr)); }
+.tiles.seven .big { font-size: 1.6rem; }
+.chart .bump { transition: opacity .15s; }
+.chart .bump-dot { stroke: var(--surface); stroke-width: 1.5; }
+
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.record-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .record-wrap { grid-template-columns: 1fr; } }

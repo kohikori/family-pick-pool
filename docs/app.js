@@ -132,6 +132,12 @@
     set('k-sw', names(st.filter((r) => r.sweeps === ms).map((r) => r.player)));
     set('k-sw-val', ms + ' sweeps');
     set('k-sw-sub', 'Perfect 3-for-3 in ' + ms + ' games');
+    const mw = Math.max(...st.map((r) => r.weeksWon));
+    const ww = st.filter((r) => r.weeksWon === mw);
+    set('k-ww', mw ? names(ww.map((r) => r.player)) : '–');
+    set('k-ww-val', mw + (mw === 1 ? ' week' : ' weeks'));
+    const wks = (r) => r.wonWeeks.map((l) => l.replace('Week ', 'Wk ')).join(', ');
+    set('k-ww-sub', mw ? (ww.length === 1 ? wks(ww[0]) : ww.map((r) => r.player + ': ' + wks(r)).join(' • ')) : 'No finished weeks yet');
 
     // power rankings
     const rk = S.ranks(st, 'points');
@@ -139,13 +145,13 @@
     const rows = st.map((r, i) => {
       const tr = el('tr');
       tr.append(rankCell(rk[i]), el('td', r.player, 'strong'), el('td', String(r.points), 'strong'), el('td', r.behind ? String(r.behind) : '–'),
-        el('td', String(r.winner)), el('td', String(r.spread)), el('td', String(r.ou)), el('td', String(r.sweeps)), el('td', pct(r.accuracy)));
+        el('td', String(r.winner)), el('td', String(r.spread)), el('td', String(r.ou)), el('td', String(r.sweeps)), el('td', String(r.weeksWon)), el('td', pct(r.accuracy)));
       const f = el('td', null, 'form'); f.append(spark(r.form, maxForm)); tr.append(f);
       return tr;
     });
     const avg = (k) => st.reduce((t, r) => t + (r[k] || 0), 0) / st.length;
     const ar = el('tr', null, 'avg');
-    ar.append(el('td', ''), el('td', 'Pool avg'), el('td', avg('points').toFixed(1)), el('td', '–'), el('td', avg('winner').toFixed(1)), el('td', avg('spread').toFixed(1)), el('td', avg('ou').toFixed(1)), el('td', avg('sweeps').toFixed(1)), el('td', pct(avg('accuracy'))), el('td', completedWeeks().length + ' wks'));
+    ar.append(el('td', ''), el('td', 'Pool avg'), el('td', avg('points').toFixed(1)), el('td', '–'), el('td', avg('winner').toFixed(1)), el('td', avg('spread').toFixed(1)), el('td', avg('ou').toFixed(1)), el('td', avg('sweeps').toFixed(1)), el('td', avg('weeksWon').toFixed(1)), el('td', pct(avg('accuracy'))), el('td', completedWeeks().length + ' wks'));
     $('rank-table').tBodies[0].replaceChildren(...rows, ar);
 
     // single-week records
@@ -283,68 +289,84 @@
     }));
   }
 
-  // ---------- points race chart ----------
+  // ---------- leadership chart: standings rank after each week ----------
   const COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#6250d6', '#e34948', '#008300'];
   function drawRace() {
     const box = $('race');
     box.replaceChildren();
     const players = state.seasonPlayers;
-    const weeks = S.weeksOf(state.rows).filter(({week}) => state.wk.some((r) => r.week === week && r.games > 0));
-    if (!weeks.length) return;
-    const W = Math.max(300, box.clientWidth), H = 300;
+    const hist = S.rankHistory(state.wk, players);
+    if (!hist.length) return;
+    const n = players.length;
+    const W = Math.max(300, box.clientWidth), H = Math.max(240, 46 * n + 40);
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', '100%'); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Running points total by week');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', '100%'); svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Standings rank of each player after every week');
     box.append(svg);
-    const mk = (tag, attrs, text) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; svg.append(n); return n; };
-    const maxY = Math.max(1, ...state.wk.map((r) => r.cum));
-    const step = maxY > 400 ? 100 : maxY > 150 ? 50 : 25;
-    const top = Math.ceil(maxY / step) * step;
-    const last = weeks[weeks.length - 1].week;
-    const ends = players.map((p, i) => ({p, i, v: (state.wk.find((r) => r.player === p && r.week === last) || {}).cum || 0}));
-    const probe = mk('text', {class: 'axis'}, '');
-    const textW = (s) => { probe.textContent = s; return probe.getComputedTextLength(); };
-    const mL = textW(String(top)) + 10, mR = Math.max(...ends.map((e) => textW(e.p + ' ' + e.v))) + 16, mT = 10, mB = 26;
+    const mk = (tag, attrs, text, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; (parent || svg).append(e); return e; };
+    const last = hist[hist.length - 1];
+    const ordinal = (k) => k + (k % 10 === 1 && k !== 11 ? 'st' : k % 10 === 2 && k !== 12 ? 'nd' : k % 10 === 3 && k !== 13 ? 'rd' : 'th');
+    const probe = mk('text', {class: 'endlab'}, '');
+    const tw = (t) => { probe.textContent = t; return probe.getComputedTextLength(); };
+    const endText = (p) => p + ' ' + last.ranks[p].cum;
+    const mL = tw('6th') + 14, mR = Math.max(...players.map((p) => tw(endText(p)))) + 22, mT = 16, mB = 28;
     probe.remove();
-    const x = (k) => mL + (weeks.length === 1 ? 0 : (k / (weeks.length - 1)) * (W - mL - mR));
-    const y = (v) => mT + (1 - v / top) * (H - mT - mB);
-    for (let v = 0; v <= top; v += step) {
-      mk('line', {x1: mL, x2: W - mR, y1: y(v), y2: y(v), class: 'grid'});
-      mk('text', {x: mL - 6, y: y(v) + 4, 'text-anchor': 'end', class: 'axis'}, String(v));
+    const x = (k) => mL + (hist.length === 1 ? (W - mL - mR) / 2 : (k / (hist.length - 1)) * (W - mL - mR));
+    const y = (rank) => mT + ((rank - 1) / Math.max(1, n - 1)) * (H - mT - mB);
+    for (let r = 1; r <= n; r++) {
+      mk('line', {x1: mL, x2: W - mR, y1: y(r), y2: y(r), class: 'grid'});
+      mk('text', {x: mL - 10, y: y(r) + 4, 'text-anchor': 'end', class: 'axis'}, ordinal(r));
     }
-    const every = Math.ceil(weeks.length / Math.max(2, Math.floor((W - mL - mR) / 48)));
-    weeks.forEach((w, k) => { if (k % every === 0 || k === weeks.length - 1) mk('text', {x: x(k), y: H - 6, 'text-anchor': 'middle', class: 'axis'}, w.week > 18 ? w.label.split(' ')[0] : 'Wk ' + w.week); });
-    players.forEach((p, i) => {
-      const pts = weeks.map((w, k) => { const r = state.wk.find((q) => q.player === p && q.week === w.week); return [x(k), y(r ? r.cum : 0)]; });
-      mk('path', {d: 'M' + pts.map((q) => q.join(',')).join('L'), fill: 'none', stroke: COLORS[i % COLORS.length], 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'});
+    const every = Math.ceil(hist.length / Math.max(2, Math.floor((W - mL - mR) / 46)));
+    hist.forEach((h, k) => { if (k % every === 0 || k === hist.length - 1) mk('text', {x: x(k), y: H - 6, 'text-anchor': 'middle', class: 'axis'}, h.week > 18 ? h.label.split(' ')[0] : 'Wk ' + h.week); });
+    // lines: leader drawn last so it sits on top
+    const order = players.slice().sort((a, b) => last.ranks[b].rank - last.ranks[a].rank);
+    const groups = {};
+    order.forEach((p) => {
+      const i = players.indexOf(p), col = COLORS[i % COLORS.length];
+      const g = mk('g', {class: 'bump', 'data-p': p});
+      groups[p] = g;
+      const pts = hist.map((h, k) => [x(k), y(h.ranks[p].rank)]);
+      mk('path', {d: 'M' + pts.map((q) => q.join(',')).join('L'), fill: 'none', stroke: col, 'stroke-width': 3, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}, null, g);
+      pts.forEach(([cx, cy]) => mk('circle', {cx, cy, r: 4.5, fill: col, class: 'bump-dot'}, null, g));
     });
-    const placed = ends.map((e) => ({...e, y: y(e.v)})).sort((a, b) => a.y - b.y);
-    for (let k = 1; k < placed.length; k++) if (placed[k].y - placed[k - 1].y < 14) placed[k].y = placed[k - 1].y + 14;
-    placed.forEach((e) => {
-      mk('circle', {cx: x(weeks.length - 1), cy: y(e.v), r: 3.5, fill: COLORS[e.i % COLORS.length]});
-      mk('text', {x: x(weeks.length - 1) + 8, y: e.y + 4, class: 'endlab'}, e.p + ' ' + e.v);
+    // end labels, nudged apart when players are tied on rank
+    const ends = players.map((p) => ({p, i: players.indexOf(p), y: y(last.ranks[p].rank), rank: last.ranks[p].rank})).sort((a, b) => a.y - b.y || a.p.localeCompare(b.p));
+    for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 15) ends[k].y = ends[k - 1].y + 15;
+    ends.forEach((e) => {
+      const t = mk('text', {x: x(hist.length - 1) + 12, y: e.y + 4, class: 'endlab'}, endText(e.p));
+      t.style.fill = COLORS[e.i % COLORS.length];
+      t.style.fontWeight = '600';
     });
-    const rule = mk('line', {y1: mT, y2: H - mB, class: 'rule', opacity: 0});
-    const hit = mk('rect', {x: mL - 10, y: 0, width: W - mL - mR + 20, height: H, fill: 'transparent'});
+    // hover: highlight a player's line, show the week's order
     const tip = $('tip');
+    const rule = mk('line', {y1: mT - 8, y2: H - mB + 4, class: 'rule', opacity: 0});
+    const hit = mk('rect', {x: mL - 16, y: 0, width: W - mL - mR + 32, height: H, fill: 'transparent'});
     const show = (ev) => {
       const r = svg.getBoundingClientRect();
-      const mx = ((ev.clientX - r.left) / r.width) * W;
-      let k = 0; weeks.forEach((_, j) => { if (Math.abs(x(j) - mx) < Math.abs(x(k) - mx)) k = j; });
+      const mx = ((ev.clientX - r.left) / r.width) * W, my = ((ev.clientY - r.top) / r.height) * H;
+      let k = 0; hist.forEach((_, j) => { if (Math.abs(x(j) - mx) < Math.abs(x(k) - mx)) k = j; });
+      const h = hist[k];
+      const near = players.reduce((b, p) => (Math.abs(y(h.ranks[p].rank) - my) < Math.abs(y(h.ranks[b].rank) - my) ? p : b), players[0]);
+      players.forEach((p) => groups[p].setAttribute('opacity', p === near ? 1 : 0.25));
       rule.setAttribute('x1', x(k)); rule.setAttribute('x2', x(k)); rule.setAttribute('opacity', 1);
-      const wr = state.wk.filter((q) => q.week === weeks[k].week).sort((a, b) => b.cum - a.cum);
-      tip.replaceChildren(el('div', 'After ' + weeks[k].label, 'tip-h'), ...wr.map((q) => {
-        const d = el('div'); const sw = el('span', null, 'sw'); sw.style.background = COLORS[players.indexOf(q.player) % COLORS.length];
-        d.append(sw, document.createTextNode(q.player + '  ' + q.cum + ' (+' + q.points + ')')); return d;
+      const sorted = players.slice().sort((a, b) => h.ranks[a].rank - h.ranks[b].rank || a.localeCompare(b));
+      const top = h.ranks[sorted[0]].cum;
+      tip.replaceChildren(el('div', 'After ' + h.label, 'tip-h'), ...sorted.map((p) => {
+        const d = el('div'); const sw = el('span', null, 'sw'); sw.style.background = COLORS[players.indexOf(p) % COLORS.length];
+        const q = h.ranks[p];
+        d.append(sw, document.createTextNode(ordinal(q.rank) + '  ' + p + '  ' + q.cum + (q.cum < top ? ' (−' + (top - q.cum) + ')' : '') + '  +' + q.points + ' this wk'));
+        if (p === near) d.style.fontWeight = '700';
+        return d;
       }));
       tip.hidden = false;
-      const left = Math.min(window.innerWidth - tip.offsetWidth - 8, ev.clientX + 14);
-      tip.style.left = Math.max(8, left) + 'px';
+      tip.style.left = Math.max(8, Math.min(window.innerWidth - tip.offsetWidth - 8, ev.clientX + 14)) + 'px';
       tip.style.top = (ev.clientY + 14) + 'px';
     };
     hit.addEventListener('pointermove', show);
     hit.addEventListener('pointerdown', show);
-    hit.addEventListener('pointerleave', () => { tip.hidden = true; rule.setAttribute('opacity', 0); });
+    hit.addEventListener('pointerleave', () => { tip.hidden = true; rule.setAttribute('opacity', 0); players.forEach((p) => groups[p].setAttribute('opacity', 1)); });
   }
 
   // ---------- tabs ----------

@@ -17,11 +17,14 @@
     for (const p of players) {
       let cum = 0;
       for (const {week, label} of weeks) {
-        const rs = rows.filter((r) => r.player_code === p && r.week === week && r.is_final);
+        const all = rows.filter((r) => r.player_code === p && r.week === week);
+        const rs = all.filter((r) => r.is_final);
         const s = (k) => rs.reduce((t, r) => t + num(r[k]), 0);
         const points = s('points');
         cum += points;
-        out.push({week, label, player: p, winner: s('winner_pt'), spread: s('spread_pt'), ou: s('ou_pt'), sweeps: s('sweep'), points, cum, games: rs.length});
+        const weekGames = new Set(rows.filter((r) => r.week === week).map((r) => r.game_id)).size;
+        const weekFinal = new Set(rows.filter((r) => r.week === week && r.is_final).map((r) => r.game_id)).size;
+        out.push({week, label, player: p, winner: s('winner_pt'), spread: s('spread_pt'), ou: s('ou_pt'), sweeps: s('sweep'), points, cum, games: rs.length, complete: weekGames > 0 && weekFinal === weekGames});
       }
     }
     return out;
@@ -30,18 +33,19 @@
   function standings(wk, players) {
     const weeks = [...new Set(wk.map((r) => r.week))];
     const won = Object.fromEntries(players.map((p) => [p, 0]));
+    const wonWeeks = Object.fromEntries(players.map((p) => [p, []]));
     for (const w of weeks) {
-      const rs = wk.filter((r) => r.week === w && r.games > 0);
+      const rs = wk.filter((r) => r.week === w && r.games > 0 && r.complete);   // only finished weeks count
       if (!rs.length) continue;
       const top = Math.max(...rs.map((r) => r.points));
-      rs.filter((r) => r.points === top).forEach((r) => { won[r.player] += 1; });
+      rs.filter((r) => r.points === top).forEach((r) => { won[r.player] += 1; wonWeeks[r.player].push(r.label); });
     }
     const rows = players.map((p) => {
       const rs = wk.filter((r) => r.player === p);
       const s = (k) => rs.reduce((t, r) => t + r[k], 0);
       const games = s('games');
       const acc = (v) => (games ? v / games : null);
-      return {player: p, points: s('points'), winner: s('winner'), spread: s('spread'), ou: s('ou'), sweeps: s('sweeps'), weeksWon: won[p], games,
+      return {player: p, points: s('points'), winner: s('winner'), spread: s('spread'), ou: s('ou'), sweeps: s('sweeps'), weeksWon: won[p], wonWeeks: wonWeeks[p], games,
         accuracy: games ? (s('winner') + s('spread') + s('ou')) / (3 * games) : null, winnerAcc: acc(s('winner')), spreadAcc: acc(s('spread')), ouAcc: acc(s('ou')),
         form: rs.filter((r) => r.games > 0).map((r) => r.points)};
     }).sort((a, b) => b.points - a.points || b.sweeps - a.sweeps);
@@ -184,7 +188,16 @@
     });
   }
 
-  const api = {weeksOf, weekly, standings, recap, grid, habits, ranks, records, gameResults};
+  // Standings rank after each week with results (shared ranks for ties), for the leadership chart.
+  function rankHistory(wk, players) {
+    const weeks = [...new Set(wk.filter((r) => r.games > 0).map((r) => r.week))].sort((a, b) => a - b);
+    return weeks.map((w) => {
+      const rs = players.map((p) => wk.find((r) => r.player === p && r.week === w)).filter(Boolean);
+      return {week: w, label: rs[0].label, ranks: Object.fromEntries(rs.map((r) => [r.player, {rank: 1 + rs.filter((q) => q.cum > r.cum).length, cum: r.cum, points: r.points}]))};
+    });
+  }
+
+  const api = {weeksOf, weekly, standings, recap, grid, habits, ranks, records, gameResults, rankHistory};
   if (typeof module !== 'undefined') module.exports = api;
   else root.Scoring = api;
 })(this);
