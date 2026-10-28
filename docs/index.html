@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Family Pick Pool</title>
+<meta name="theme-color" content="#14201a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="eyebrow">Family NFL pick pool</div>
+      <h1>Family Pick Pool</h1>
+    </div>
+    <label class="season">
+      <span class="sr-only">Season</span>
+      <select id="season" aria-label="Season"></select>
+    </label>
+  </header>
+  <p class="takeaway" id="takeaway">Loading standings…</p>
+
+  <nav class="tabs" role="tablist" aria-label="Pages">
+    <button class="tab" role="tab" data-tab="standings" aria-selected="true">Standings</button>
+    <button class="tab" role="tab" data-tab="recap" aria-selected="false">Weekly recap</button>
+    <button class="tab" role="tab" data-tab="stats" aria-selected="false">Player stats</button>
+  </nav>
+
+  <main>
+    <section id="standings" data-page="standings">
+      <div class="tiles">
+        <div class="tile"><span class="label">Leader</span><span class="big" id="t-leader">–</span><span class="sub" id="t-leader-sub"></span></div>
+        <div class="tile"><span class="label">Latest week's top score</span><span class="big" id="t-week">–</span><span class="sub" id="t-week-sub"></span></div>
+        <div class="tile"><span class="label">Most sweeps (all three right)</span><span class="big" id="t-sweeps">–</span><span class="sub" id="t-sweeps-sub"></span></div>
+      </div>
+      <div class="card">
+        <h2>Standings</h2>
+        <p class="note" id="scoring-note"></p>
+        <div class="scroll"><table class="tbl" id="standings-table">
+          <thead><tr><th>Player</th><th>Points</th><th>Behind</th><th>Winners</th><th>Spreads</th><th>Over/Under</th><th>Sweeps</th><th>Weeks won</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h2>Points race</h2>
+        <p class="note">Running total after each week. Hover or tap for the numbers.</p>
+        <div class="chart" id="race"></div>
+      </div>
+    </section>
+
+    <section id="recap" data-page="recap" hidden>
+      <div class="controls">
+        <label for="week" class="label">Week</label>
+        <select id="week"></select>
+        <span class="note" id="week-status"></span>
+      </div>
+      <article class="card writeup" id="writeup" hidden>
+        <h2 id="writeup-title">This week</h2>
+        <div id="writeup-body"></div>
+      </article>
+      <div class="grid2">
+        <div class="card">
+          <h2>Week in review</h2>
+          <dl class="facts" id="facts"></dl>
+        </div>
+        <div class="card">
+          <h2>Points this week</h2>
+          <div class="scroll"><table class="tbl" id="week-table">
+            <thead><tr><th>Player</th><th>Winners</th><th>Spreads</th><th>O/U</th><th>Sweeps</th><th>Points</th><th>Season</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Every pick</h2>
+        <p class="note">Each cell is winner / spread / over-under. <span class="ok">✓</span> right, <span class="no">✗</span> wrong, · not final yet. Picks for games that haven't kicked off stay hidden.</p>
+        <div class="scroll"><table class="tbl picks" id="picks-table">
+          <thead></thead><tbody></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="stats" data-page="stats" hidden>
+      <div class="card">
+        <h2>Season habits</h2>
+        <p class="note">Upset picks: picking the underdog to win outright. Laying 7+: taking a favorite of 7 or more points against the spread. Solo spread picks: spread picks nobody else made.</p>
+        <div class="scroll"><table class="tbl" id="habits-table">
+          <thead><tr><th>Player</th><th>Winners</th><th>Spreads</th><th>O/U</th><th>Upset picks</th><th>Laying 7+</th><th>Picks the over</th><th>Solo spread picks</th><th>Best week</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </section>
+  </main>
+  <p class="error" id="error" hidden></p>
+  <footer class="foot">Standings are calculated from each game's picks and results.</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="scoring.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
