@@ -22,28 +22,55 @@
     </label>
   </header>
   <p class="takeaway" id="takeaway">Loading standings…</p>
+  <p class="error" id="error" hidden></p>
 
   <nav class="tabs" role="tablist" aria-label="Pages">
-    <button class="tab" role="tab" data-tab="standings" aria-selected="true">Standings</button>
-    <button class="tab" role="tab" data-tab="recap" aria-selected="false">Weekly recap</button>
+    <button class="tab" role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
+    <button class="tab" role="tab" data-tab="week" aria-selected="false">Weekly results</button>
     <button class="tab" role="tab" data-tab="stats" aria-selected="false">Player stats</button>
   </nav>
 
   <main>
-    <section id="standings" data-page="standings">
-      <div class="tiles">
-        <div class="tile"><span class="label">Leader</span><span class="big" id="t-leader">–</span><span class="sub" id="t-leader-sub"></span></div>
-        <div class="tile"><span class="label">Latest week's top score</span><span class="big" id="t-week">–</span><span class="sub" id="t-week-sub"></span></div>
-        <div class="tile"><span class="label">Most sweeps (all three right)</span><span class="big" id="t-sweeps">–</span><span class="sub" id="t-sweeps-sub"></span></div>
+    <!-- ============ DASHBOARD ============ -->
+    <section id="dashboard" data-page="dashboard">
+      <div class="tiles six">
+        <div class="tile lead"><span class="label">👑 Overall leader</span><span class="big" id="k-leader">–</span><span class="val" id="k-leader-val"></span><span class="sub" id="k-leader-sub"></span></div>
+        <div class="tile"><span class="label" id="k-week-label">🏆 Week winner</span><span class="big" id="k-week">–</span><span class="val" id="k-week-val"></span><span class="sub" id="k-week-sub"></span></div>
+        <div class="tile"><span class="label">🎯 Straight-up leader</span><span class="big" id="k-su">–</span><span class="val" id="k-su-val"></span><span class="sub" id="k-su-sub"></span></div>
+        <div class="tile"><span class="label">📊 Spread specialist</span><span class="big" id="k-ats">–</span><span class="val" id="k-ats-val"></span><span class="sub" id="k-ats-sub"></span></div>
+        <div class="tile"><span class="label">⚖️ Over/under leader</span><span class="big" id="k-ou">–</span><span class="val" id="k-ou-val"></span><span class="sub" id="k-ou-sub"></span></div>
+        <div class="tile"><span class="label">⚡ Sweep king</span><span class="big" id="k-sw">–</span><span class="val" id="k-sw-val"></span><span class="sub" id="k-sw-sub"></span></div>
       </div>
-      <div class="card">
-        <h2>Standings</h2>
-        <p class="note" id="scoring-note"></p>
-        <div class="scroll"><table class="tbl" id="standings-table">
-          <thead><tr><th>Player</th><th>Points</th><th>Behind</th><th>Winners</th><th>Spreads</th><th>Over/Under</th><th>Sweeps</th><th>Weeks won</th></tr></thead>
-          <tbody></tbody>
-        </table></div>
+
+      <div class="grid-main">
+        <div class="card">
+          <h2>Power rankings &amp; form guide</h2>
+          <div class="scroll"><table class="tbl" id="rank-table">
+            <thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>GB</th><th>Winners</th><th>Spreads</th><th>O/U</th><th>Sweeps</th><th>Accuracy</th><th class="form-h">Form</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+          <p class="note" id="scoring-note"></p>
+        </div>
+
+        <div class="card">
+          <h2>⚡ Single-week point record</h2>
+          <div class="record">
+            <span class="label">👑 Record holder</span>
+            <span class="big" id="r1">–</span>
+            <span class="sub" id="r1-sub"></span>
+            <span class="label">🎯 Pick breakdown</span>
+            <span class="val" id="r1-break">–</span>
+            <span class="label">🥈 Next best week</span>
+            <span class="val" id="r2">–</span>
+            <span class="sub" id="r2-sub"></span>
+          </div>
+          <div class="scroll"><table class="tbl compact" id="record-table">
+            <thead><tr><th>Top weeks</th><th>Week</th><th>Points</th><th>Sweeps</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
       </div>
+
       <div class="card">
         <h2>Points race</h2>
         <p class="note">Running total after each week. Hover or tap for the numbers.</p>
@@ -51,29 +78,49 @@
       </div>
     </section>
 
-    <section id="recap" data-page="recap" hidden>
+    <!-- ============ WEEKLY RESULTS ============ -->
+    <section id="week" data-page="week" hidden>
       <div class="controls">
-        <label for="week" class="label">Week</label>
-        <select id="week"></select>
-        <span class="note" id="week-status"></span>
+        <label for="week-sel" class="label">Week</label>
+        <select id="week-sel"></select>
+        <span class="pill" id="week-status"></span>
+        <span class="note" id="week-count"></span>
       </div>
+
+      <div class="tiles three">
+        <div class="tile lead"><span class="label" id="w-lead-label">🏆 Week leader</span><span class="big" id="w-lead">–</span><span class="val" id="w-lead-val"></span><span class="sub" id="w-lead-sub"></span></div>
+        <div class="tile"><span class="label">🥈 Runner-up</span><span class="big" id="w-second">–</span><span class="val" id="w-second-val"></span></div>
+        <div class="tile"><span class="label">🏈 Pool total</span><span class="big" id="w-pool">–</span><span class="val" id="w-pool-val"></span></div>
+      </div>
+
       <article class="card writeup" id="writeup" hidden>
         <h2 id="writeup-title">This week</h2>
         <div id="writeup-body"></div>
       </article>
-      <div class="grid2">
+
+      <div class="grid-main">
+        <div class="card">
+          <h2>Week leaderboard</h2>
+          <div class="scroll"><table class="tbl" id="week-table">
+            <thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>Winners</th><th>Spreads</th><th>O/U</th><th>Sweeps</th><th>Accuracy</th><th>Season</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+          <p class="note">Points: one per correct pick plus a bonus point for each game where all three picks were right.</p>
+        </div>
         <div class="card">
           <h2>Week in review</h2>
           <dl class="facts" id="facts"></dl>
         </div>
-        <div class="card">
-          <h2>Points this week</h2>
-          <div class="scroll"><table class="tbl" id="week-table">
-            <thead><tr><th>Player</th><th>Winners</th><th>Spreads</th><th>O/U</th><th>Sweeps</th><th>Points</th><th>Season</th></tr></thead>
-            <tbody></tbody>
-          </table></div>
-        </div>
       </div>
+
+      <div class="card">
+        <h2>Game results &amp; spread covers</h2>
+        <div class="scroll"><table class="tbl" id="games-table">
+          <thead><tr><th>Game</th><th>Line</th><th>Total</th><th>Winner</th><th>Covered</th><th>Over/Under</th><th>Picked winner</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+
       <div class="card">
         <h2>Every pick</h2>
         <p class="note">Each cell is winner / spread / over-under. <span class="ok">✓</span> right, <span class="no">✗</span> wrong, · not final yet. Picks for games that haven't kicked off stay hidden.</p>
@@ -83,6 +130,7 @@
       </div>
     </section>
 
+    <!-- ============ PLAYER STATS ============ -->
     <section id="stats" data-page="stats" hidden>
       <div class="card">
         <h2>Season habits</h2>
@@ -94,7 +142,6 @@
       </div>
     </section>
   </main>
-  <p class="error" id="error" hidden></p>
   <footer class="foot">Standings are calculated from each game's picks and results.</footer>
 </div>
 <div class="tip" id="tip" hidden></div>

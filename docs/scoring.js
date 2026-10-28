@@ -39,7 +39,11 @@
     const rows = players.map((p) => {
       const rs = wk.filter((r) => r.player === p);
       const s = (k) => rs.reduce((t, r) => t + r[k], 0);
-      return {player: p, points: s('points'), winner: s('winner'), spread: s('spread'), ou: s('ou'), sweeps: s('sweeps'), weeksWon: won[p]};
+      const games = s('games');
+      const acc = (v) => (games ? v / games : null);
+      return {player: p, points: s('points'), winner: s('winner'), spread: s('spread'), ou: s('ou'), sweeps: s('sweeps'), weeksWon: won[p], games,
+        accuracy: games ? (s('winner') + s('spread') + s('ou')) / (3 * games) : null, winnerAcc: acc(s('winner')), spreadAcc: acc(s('spread')), ouAcc: acc(s('ou')),
+        form: rs.filter((r) => r.games > 0).map((r) => r.points)};
     }).sort((a, b) => b.points - a.points || b.sweeps - a.sweeps);
     const lead = rows.length ? rows[0].points : 0;
     return rows.map((r) => ({...r, behind: lead - r.points}));
@@ -153,7 +157,34 @@
     });
   }
 
-  const api = {weeksOf, weekly, standings, recap, grid, habits};
+  // Shared ranks: 1, 2, 2, 4 ...
+  function ranks(list, key) {
+    return list.map((r) => 1 + list.filter((q) => q[key] > r[key]).length);
+  }
+
+  // Best single-week scores this season, highest first, with their pick breakdown.
+  function records(wk) {
+    return wk.filter((r) => r.games > 0).slice().sort((a, b) => b.points - a.points || b.sweeps - a.sweeps || a.week - b.week);
+  }
+
+  // One row per game in a week: line, result and how many players picked the winner.
+  function gameResults(rows, week) {
+    return gamesOf(rows, week).map((g) => {
+      const g0 = g[0];
+      return {
+        game: g0.away + ' @ ' + g0.home,
+        line: g0.favorite ? g0.favorite + ' −' + num(g0.spread) : '–',
+        total: g0.total != null ? num(g0.total) : '–',
+        final: !!g0.is_final,
+        winner: g0.is_final ? g0.winner : '',
+        covered: g0.is_final ? g0.covered : '',
+        ou: g0.is_final ? g0.over_under : '',
+        pickedWinner: g0.is_final && g0.winner !== 'Tie' ? g.filter((r) => r.pick_winner === g0.winner).length + ' of ' + g.length : '',
+      };
+    });
+  }
+
+  const api = {weeksOf, weekly, standings, recap, grid, habits, ranks, records, gameResults};
   if (typeof module !== 'undefined') module.exports = api;
   else root.Scoring = api;
 })(this);

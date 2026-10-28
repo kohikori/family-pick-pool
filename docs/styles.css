@@ -68,3 +68,31 @@ main section { display: flex; flex-direction: column; gap: 16px; }
 .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
 .error { background: var(--accent-soft); border-radius: 8px; padding: 12px 14px; margin: 0; }
 .foot { font-size: .8rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* ---- dashboard layout (mirrors the spreadsheet dashboard) ---- */
+.tiles.six { grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr)); }
+.tiles.three { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.tile .big { font-size: 1.85rem; }
+.tile .val { font: 600 1rem var(--f-body); }
+.tile.lead { background: var(--accent-soft); border-color: transparent; }
+.grid-main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .grid-main { grid-template-columns: 1fr; } }
+.record { display: grid; gap: 2px; padding-bottom: 6px; }
+.record .label { margin-top: 8px; }
+.record .label:first-child { margin-top: 0; }
+.record .big { font-size: 1.7rem; }
+.record .val { font-weight: 600; }
+.tbl td.rank { text-align: left; font-family: var(--f-body); white-space: nowrap; }
+.tbl tr.avg td { color: var(--muted); font-style: italic; border-top: 1px solid var(--line); }
+.tbl td.form { text-align: left; padding-top: 4px; padding-bottom: 4px; }
+.tbl th.form-h { text-align: left; }
+.spark { fill: none; stroke: var(--accent); stroke-width: 1.75; stroke-linejoin: round; stroke-linecap: round; }
+.spark-end { fill: var(--accent); }
+.tbl.compact td, .tbl.compact th { padding: 6px 8px; }
+.pill { font: 600 .74rem var(--f-data); letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--line); color: var(--ink-2); }
+.pill.final { background: var(--accent-soft); color: var(--accent); }
+.pill.in-progress { background: color-mix(in oklab, #eda100 25%, var(--surface)); color: var(--ink); }
+#error:not([hidden]) { border-left: 4px solid var(--no); }
+#rank-table th:nth-child(2), #rank-table td:nth-child(2), #week-table th:nth-child(2), #week-table td:nth-child(2) { text-align: left; }
+#games-table th, #games-table td { text-align: left; }
+#games-table th:last-child, #games-table td:last-child { text-align: right; }
