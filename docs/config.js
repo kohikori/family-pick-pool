@@ -1,5 +1,6 @@
-// Fill these in from Supabase: Project Settings > API.
+// Supabase connection for the Family Pick Pool site.
 // Both values are meant to be public; the database's security rules protect the data.
+// NEVER put the secret key (sb_secret_...) here: this file is published on the web.
 window.POOL_CONFIG = {
   supabaseUrl: 'https://okqordpqamfmamymspuu.supabase.co',
   supabaseAnonKey: 'sb_publishable_qvwgLUhLhZlI7dXoVtux4Q_slIaepNA',

@@ -362,6 +362,14 @@
 
   // ---------- start ----------
   (async () => {
+    // index.html and app.js must come from the same update.
+    if (!document.getElementById('rank-table')) {
+      const err = $('error');
+      err.hidden = false;
+      err.textContent = 'This page is out of date compared with app.js. Re-upload index.html from the latest update, wait a minute, then refresh with Cmd+Shift+R (Ctrl+Shift+R on Windows).';
+      $('takeaway').textContent = '';
+      return;
+    }
     try {
       await Promise.all([loadSeasons(), loadPlayers()]);
       await loadSeason();
