@@ -111,6 +111,7 @@
     const st = state.st;
     const bonus = (state.seasons.find((s) => s.season === state.season) || {}).sweep_bonus_points;
     set('scoring-note', 'GB: points behind the leader. Accuracy: share of all picks correct. Form: points in each week this season. One point per correct pick' + (bonus ? ', plus a bonus point for each game where all three picks were right' : '; this season had no sweep bonus') + '. Pushes and ties score nothing.');
+    renderDashRecap();
     if (!st.length) return;
     // tiles
     const lead = st.filter((r) => r.points === st[0].points);
@@ -186,6 +187,20 @@
     svg.append(c);
     const t = document.createElementNS(NS, 'title'); t.textContent = 'Weekly points: ' + vals.join(', '); svg.append(t);
     return svg;
+  }
+
+  // Latest weekly recap, previewed on the Dashboard.
+  function renderDashRecap() {
+    const card = $('dash-recap');
+    if (!card) return;
+    const latest = Object.values(state.recaps).sort((a, b) => b.week - a.week)[0];
+    card.hidden = !latest;
+    if (!latest) return;
+    const wl = (S.weeksOf(state.rows).find((w) => w.week === latest.week) || {}).label || 'Week ' + latest.week;
+    set('dash-recap-week', '📰 ' + wl + ' recap');
+    set('dash-recap-title', latest.title || wl);
+    set('dash-recap-lede', String(latest.body_md || '').split(/\n\s*\n/)[0].replace(/[*_#>`]/g, '').trim());
+    $('dash-recap-more').onclick = () => { state.week = latest.week; renderWeek(); window.POOL.showTab('week'); window.scrollTo(0, 0); };
   }
 
   function renderWeek() {

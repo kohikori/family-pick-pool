@@ -170,3 +170,10 @@ input[type=email], input[type=number], input[type=datetime-local], .lines-tbl se
 .add-row select { font: 500 .9rem var(--f-body); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .signin-code { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
 #signin-token { font: 600 1.1rem var(--f-data); letter-spacing: .15em; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); flex: 1 1 200px; min-width: 0; }
+
+/* Dashboard: latest recap preview */
+.recap-card { display: flex; flex-direction: column; gap: 6px; }
+.recap-card h2 { margin: 0; }
+.recap-card p { margin: 0; max-width: 68ch; }
+.linkish { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+.linkish:hover { text-decoration: underline; }

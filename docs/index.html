@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261029b">
+<link rel="stylesheet" href="styles.css?v=20261029c">
 </head>
 <body>
 <div class="wrap">
@@ -54,6 +54,13 @@
         <div class="tile"><span class="label">⚡ Sweep king</span><span class="big" id="k-sw">–</span><span class="val" id="k-sw-val"></span><span class="sub" id="k-sw-sub"></span></div>
         <div class="tile"><span class="label">📅 Most weeks won</span><span class="big" id="k-ww">–</span><span class="val" id="k-ww-val"></span><span class="sub" id="k-ww-sub"></span></div>
       </div>
+
+      <article class="card writeup recap-card" id="dash-recap" hidden>
+        <span class="label" id="dash-recap-week">Latest recap</span>
+        <h2 id="dash-recap-title"></h2>
+        <p id="dash-recap-lede"></p>
+        <button type="button" class="linkish" id="dash-recap-more">Read the full recap →</button>
+      </article>
 
       <div class="stack">
         <div class="card">
@@ -236,10 +243,10 @@
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="config.js?v=20261029b"></script>
-<script src="scoring.js?v=20261029b"></script>
-<script src="app.js?v=20261029b"></script>
-<script src="picks.js?v=20261029b"></script>
+<script src="config.js?v=20261029c"></script>
+<script src="scoring.js?v=20261029c"></script>
+<script src="app.js?v=20261029c"></script>
+<script src="picks.js?v=20261029c"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   (function () {
