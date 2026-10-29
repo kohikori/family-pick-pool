@@ -7,6 +7,8 @@
   const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
 
   const state = {season: null, rows: [], players: cfg.players.slice(), wk: [], recaps: {}, week: null, tab: 'dashboard', seasons: []};
+  // Shared with picks.js (sign-in, My picks, Set lines).
+  window.POOL = {db, cfg, $, el, state};
 
   // ---------- data ----------
   async function fetchAll(table, filter) {
@@ -375,11 +377,14 @@
     document.querySelectorAll('[data-page]').forEach((s) => { s.hidden = s.dataset.page !== name; });
     document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
     if (name === 'dashboard' && state.rows.length) drawRace();
+    if (window.POOL.onTab) window.POOL.onTab(name);
   }
+  window.POOL.showTab = (name) => { showTab(name); history.replaceState(null, '', '#' + name); };
+  window.POOL.reload = () => loadSeason();
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => { showTab(b.dataset.tab); history.replaceState(null, '', '#' + b.dataset.tab); }));
   const h = location.hash.slice(1).split('&')[0];
   const legacy = {standings: 'dashboard', recap: 'week'};
-  if (['dashboard', 'week', 'stats', 'standings', 'recap'].includes(h)) showTab(legacy[h] || h);
+  if (['dashboard', 'week', 'stats', 'picks', 'lines', 'standings', 'recap'].includes(h)) showTab(legacy[h] || h);
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (state.tab === 'dashboard' && state.rows.length) drawRace(); }, 150); });
 
   // ---------- start ----------

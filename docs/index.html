@@ -5,9 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Family Pick Pool</title>
 <meta name="theme-color" content="#14201a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pick Pool">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261028d">
+<link rel="stylesheet" href="styles.css?v=20261029b">
 </head>
 <body>
 <div class="wrap">
@@ -16,18 +23,23 @@
       <div class="eyebrow">Family NFL pick pool</div>
       <h1>Family Pick Pool</h1>
     </div>
-    <label class="season">
-      <span class="sr-only">Season</span>
-      <select id="season" aria-label="Season"></select>
-    </label>
+    <div class="top-right">
+      <div class="account" id="account"></div>
+      <label class="season">
+        <span class="sr-only">Season</span>
+        <select id="season" aria-label="Season"></select>
+      </label>
+    </div>
   </header>
   <p class="takeaway" id="takeaway">Loading standings…</p>
   <p class="error" id="error" hidden></p>
 
   <nav class="tabs" role="tablist" aria-label="Pages">
+    <button class="tab" role="tab" data-tab="picks" aria-selected="false">My picks</button>
     <button class="tab" role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
     <button class="tab" role="tab" data-tab="week" aria-selected="false">Weekly results</button>
     <button class="tab" role="tab" data-tab="stats" aria-selected="false">Player stats</button>
+    <button class="tab" role="tab" data-tab="lines" aria-selected="false" hidden>Set lines</button>
   </nav>
 
   <main>
@@ -133,6 +145,80 @@
       </div>
     </section>
 
+    <!-- ============ MY PICKS ============ -->
+    <section id="picks" data-page="picks" hidden>
+      <div class="card signin" id="signin" hidden>
+        <h2>Sign in to make your picks</h2>
+        <p class="note">Enter the email you use for the pool. We'll email you a link; open it on this phone or computer and you'll stay signed in.</p>
+        <div class="signin-row">
+          <input type="email" id="signin-email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email">
+          <button class="btn primary" id="signin-send" type="button">Email me a sign-in link</button>
+        </div>
+        <p class="msg" id="signin-msg" role="status"></p>
+        <div class="signin-code" id="signin-code" hidden>
+          <p class="note">Using the app saved on your home screen? The email also has a code. Type it here instead of tapping the link.</p>
+          <div class="signin-row">
+            <input type="text" id="signin-token" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Code from the email" aria-label="Code from the email">
+            <button class="btn" id="signin-verify" type="button">Sign in with code</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="not-linked" hidden>
+        <h2>Almost there</h2>
+        <p id="not-linked-msg"></p>
+      </div>
+      <div id="picks-app" hidden>
+        <div class="controls picks-controls">
+          <label for="pk-week" class="label">Week</label>
+          <select id="pk-week"></select>
+          <span class="admin-for" id="pk-for-wrap" hidden>
+            <label for="pk-for" class="label">Picking for</label>
+            <select id="pk-for"></select>
+          </span>
+          <span class="note" id="pk-progress"></span>
+        </div>
+        <p class="note warn" id="pk-for-note" hidden>You're entering picks for someone else. Their picks for games that haven't started stay hidden (secret ballot), so anything you save here replaces whatever they had.</p>
+        <div class="card fillbar" id="pk-fillbar">
+          <span class="label">Fill every open game</span>
+          <div class="fill-btns">
+            <button class="btn" type="button" data-fill-all="fav">Favorite both ways</button>
+            <button class="btn" type="button" data-fill-all="hedge">Hedge my bet</button>
+            <button class="btn" type="button" data-fill-all="upset">Upset</button>
+          </div>
+          <span class="note">Sets the winner and spread picks only. Over/unders are always yours to choose. A game saves once all three picks are set.</span>
+        </div>
+        <div id="pk-games" class="games"></div>
+      </div>
+    </section>
+
+    <!-- ============ SET LINES (line-setters) ============ -->
+    <section id="lines" data-page="lines" hidden>
+      <div class="controls">
+        <label for="ln-week" class="label">Week</label>
+        <select id="ln-week"></select>
+        <button class="btn" type="button" id="ln-espn">Load schedule from ESPN</button>
+        <button class="btn" type="button" id="ln-scores">Get final scores from ESPN</button>
+      </div>
+      <p class="msg" id="ln-msg" role="status"></p>
+      <div class="card">
+        <h2>Games, lines and scores</h2>
+        <p class="note">Set the favorite, the spread (points the favorite gives) and the total, then Save. A line freezes once anyone has picked that game. Enter final scores when games end; covers and over/unders are worked out automatically.</p>
+        <div class="scroll"><table class="tbl lines-tbl" id="ln-table">
+          <thead><tr><th>Game</th><th>Kickoff (your time)</th><th>Favorite</th><th>Spread</th><th>Total</th><th>Away score</th><th>Home score</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h2>Add a game</h2>
+        <div class="add-row">
+          <label>Away <select id="ln-add-away"></select></label>
+          <label>Home <select id="ln-add-home"></select></label>
+          <label>Kickoff <input type="datetime-local" id="ln-add-kick"></label>
+          <button class="btn primary" type="button" id="ln-add">Add game</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ PLAYER STATS ============ -->
     <section id="stats" data-page="stats" hidden>
       <div class="card">
@@ -145,13 +231,23 @@
       </div>
     </section>
   </main>
-  <footer class="foot">Standings are calculated from each game's picks and results.</footer>
+  <footer class="foot">Standings are calculated from each game's picks and results. <span id="install-hint"></span></footer>
 </div>
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="config.js?v=20261028d"></script>
-<script src="scoring.js?v=20261028d"></script>
-<script src="app.js?v=20261028d"></script>
+<script src="config.js?v=20261029b"></script>
+<script src="scoring.js?v=20261029b"></script>
+<script src="app.js?v=20261029b"></script>
+<script src="picks.js?v=20261029b"></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  (function () {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const hint = document.getElementById('install-hint');
+    if (hint && !standalone) hint.textContent = ios ? 'Tip: tap Share, then “Add to Home Screen” to keep this on your phone.' : 'Tip: use your browser menu’s “Install app” or “Add to Home screen” to keep this on your phone.';
+  })();
+</script>
 </body>
 </html>
