@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261029e">
+<link rel="stylesheet" href="styles.css?v=20261029f">
 </head>
 <body>
 <div class="wrap">
@@ -58,7 +58,7 @@
       <article class="card writeup recap-card" id="dash-recap" hidden>
         <span class="label" id="dash-recap-week">Latest recap</span>
         <h2 id="dash-recap-title"></h2>
-        <p id="dash-recap-lede"></p>
+        <div id="dash-recap-lede"></div>
         <button type="button" class="linkish" id="dash-recap-more">Read the full recap →</button>
       </article>
 
@@ -112,7 +112,7 @@
       <div class="tiles three">
         <div class="tile lead"><span class="label" id="w-lead-label">🏆 Week leader</span><span class="big" id="w-lead">–</span><span class="val" id="w-lead-val"></span><span class="sub" id="w-lead-sub"></span></div>
         <div class="tile"><span class="label">🥈 Runner-up</span><span class="big" id="w-second">–</span><span class="val" id="w-second-val"></span></div>
-        <div class="tile"><span class="label">🏈 Pool total</span><span class="big" id="w-pool">–</span><span class="val" id="w-pool-val"></span></div>
+        <div class="tile"><span class="label">🤝 Group consensus</span><span class="big" id="w-pool">–</span><span class="val" id="w-pool-val"></span><span class="sub" id="w-pool-sub"></span></div>
       </div>
 
       <article class="card writeup" id="writeup" hidden>
@@ -243,10 +243,10 @@
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="config.js?v=20261029e"></script>
-<script src="scoring.js?v=20261029e"></script>
-<script src="app.js?v=20261029e"></script>
-<script src="picks.js?v=20261029e"></script>
+<script src="config.js?v=20261029f"></script>
+<script src="scoring.js?v=20261029f"></script>
+<script src="app.js?v=20261029f"></script>
+<script src="picks.js?v=20261029f"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   (function () {

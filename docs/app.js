@@ -189,6 +189,44 @@
     return svg;
   }
 
+  // Recap text -> one sentence per line, "Label:" call-outs underlined, player codes in bold.
+  // Lists after a call-out ("A; B; C") get one line each.
+  function formatRecap(text, inline) {
+    const codes = (state.seasonPlayers || state.players).slice().sort((a, b) => b.length - a.length).map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const codeRe = new RegExp('(^|[^A-Za-z])(' + codes.join('|') + ')(?![A-Za-z])', 'g');
+    const rich = (str) => {
+      const out = []; let last = 0, m;
+      codeRe.lastIndex = 0;
+      while ((m = codeRe.exec(str))) {
+        const at = m.index + m[1].length;
+        if (at > last) out.push(document.createTextNode(str.slice(last, at)));
+        out.push(el('b', m[2]));
+        last = at + m[2].length;
+      }
+      if (last < str.length) out.push(document.createTextNode(str.slice(last)));
+      return out;
+    };
+    const line = (sentence) => {
+      const div = el('div', null, 'rc-line');
+      const m = sentence.match(/^([A-Z][A-Za-z' ]{2,30}):\s+(.*)$/);
+      if (!m) { div.append(...rich(sentence)); return div; }
+      div.append(el('u', m[1]), document.createTextNode(': '));
+      const items = m[2].replace(/\.$/, '').split(/;\s+/);
+      if (items.length < 2) { div.append(...rich(m[2])); return div; }
+      const ul = el('ul', null, 'rc-list');
+      items.forEach((it) => { const li = el('li'); li.append(...rich(it.replace(/^and\s+/, ''))); ul.append(li); });
+      div.append(ul);
+      return div;
+    };
+    const sentences = (para) => para.replace(/[*_#>`]/g, '').trim().split(/(?<=[.!?])\s+(?=[A-Z(])/).filter(Boolean);
+    const paras = String(text || '').split(/\n\s*\n/).filter((p) => p.trim());
+    return paras.map((para) => {
+      const p = el(inline ? 'div' : 'div', null, 'rc-para');
+      p.append(...sentences(para).map(line));
+      return p;
+    });
+  }
+
   // Latest weekly recap, previewed on the Dashboard.
   function renderDashRecap() {
     const card = $('dash-recap');
@@ -199,7 +237,7 @@
     const wl = (S.weeksOf(state.rows).find((w) => w.week === latest.week) || {}).label || 'Week ' + latest.week;
     set('dash-recap-week', '📰 ' + wl + ' recap');
     set('dash-recap-title', latest.title || wl);
-    set('dash-recap-lede', String(latest.body_md || '').split(/\n\s*\n/)[0].replace(/[*_#>`]/g, '').trim());
+    $('dash-recap-lede').replaceChildren(...formatRecap(String(latest.body_md || '').split(/\n\s*\n/)[0], true));
     $('dash-recap-more').onclick = () => { state.week = latest.week; renderWeek(); window.POOL.showTab('week'); window.scrollTo(0, 0); };
   }
 
@@ -229,12 +267,31 @@
       set('w-lead-sub', (ru ? 'Margin: +' + (top - ru.points) : 'Tied') + ' • ' + lead[0].sweeps + ' sweeps');
       set('w-second', ru ? names(ww.filter((r) => r.points === ru.points).map((r) => r.player)) : '–');
       set('w-second-val', ru ? ru.points + ' points' : '');
-      const tot = ww.reduce((t, r) => t + r.points, 0);
-      set('w-pool', tot + ' points');
-      set('w-pool-val', (tot / ww.length).toFixed(1) + ' average per player');
+      // How the group's majority pick did in each game (splits and pushes don't count).
+      const rec = {w: [0, 0], s: [0, 0], o: [0, 0]};
+      const byGame = {}, contra = {};
+      state.rows.filter((r) => r.week === state.week && r.is_final).forEach((r) => (byGame[r.game_id] = byGame[r.game_id] || []).push(r));
+      Object.values(byGame).forEach((g) => {
+        [['w', 'pick_winner', 'winner'], ['s', 'pick_spread', 'covered'], ['o', 'pick_ou', 'over_under']].forEach(([k, pick, res]) => {
+          const out = g[0][res];
+          if (!out || out === 'Tie' || out === 'Push') return;
+          const n = {}; g.forEach((r) => { n[r[pick]] = (n[r[pick]] || 0) + 1; });
+          const top = Math.max(...Object.values(n)), sides = Object.keys(n).filter((x) => n[x] === top);
+          if (sides.length > 1) return;
+          rec[k][sides[0] === out ? 0 : 1] += 1;
+          g.forEach((r) => { if (r[pick] !== sides[0] && r[pick] === out) contra[r.player_code] = (contra[r.player_code] || 0) + 1; });
+        });
+      });
+      const wl = (x) => x[0] + '–' + x[1];
+      const all = [rec.w[0] + rec.s[0] + rec.o[0], rec.w[1] + rec.s[1] + rec.o[1]];
+      set('w-pool', wl(all));
+      set('w-pool-val', 'Straight up ' + wl(rec.w) + ' · Spread ' + wl(rec.s) + ' · O/U ' + wl(rec.o));
+      const best = Math.max(0, ...Object.values(contra));
+      const who = Object.keys(contra).filter((p) => contra[p] === best);
+      set('w-pool-sub', best ? 'Best against the crowd: ' + names(who) + ' (' + best + ' right ' + (best === 1 ? 'call' : 'calls') + ' against the majority)' : 'Nobody beat the majority this week');
     } else {
       ['w-lead', 'w-second', 'w-pool'].forEach((id) => set(id, '–'));
-      ['w-lead-val', 'w-lead-sub', 'w-second-val', 'w-pool-val'].forEach((id) => set(id, 'Waiting on results'));
+      ['w-lead-val', 'w-lead-sub', 'w-second-val', 'w-pool-val'].forEach((id) => set(id, 'Waiting on results')); set('w-pool-sub', '');
     }
 
     // written recap
@@ -242,7 +299,7 @@
     $('writeup').hidden = !w;
     if (w) {
       set('writeup-title', w.title || 'This week');
-      $('writeup-body').replaceChildren(...String(w.body_md).split(/\n\s*\n/).map((para) => el('p', para.replace(/[*_#>`]/g, '').trim())));
+      $('writeup-body').replaceChildren(...formatRecap(w.body_md));
     }
 
     // leaderboard
