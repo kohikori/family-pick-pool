@@ -132,7 +132,11 @@
     leaderTile('k-ats', 'spread', 'spreadAcc', 'wins');
     leaderTile('k-ou', 'ou', 'ouAcc', 'wins');
     const ms = Math.max(...st.map((r) => r.sweeps));
-    set('k-sw', names(st.filter((r) => r.sweeps === ms).map((r) => r.player)));
+    const sweepers = st.filter((r) => r.sweeps === ms).map((r) => r.player);
+    const queens = cfg.sweepQueens || [];
+    const nq = sweepers.filter((p) => queens.includes(p)).length;
+    set('k-sw-label', '⚡ ' + (nq === sweepers.length ? 'Sweep queen' : nq ? 'Sweep royalty' : 'Sweep king'));
+    set('k-sw', names(sweepers));
     set('k-sw-val', ms + ' sweeps');
     set('k-sw-sub', 'Perfect 3-for-3 in ' + ms + ' games');
     const mw = Math.max(...st.map((r) => r.weeksWon));
@@ -320,13 +324,6 @@
     }
     $('week-table').tBodies[0].replaceChildren(...rows);
 
-    // week in review
-    const rc = S.recap(state.rows, state.wk, state.week);
-    const facts = [['Biggest upset', rc.upset], ['Lone correct calls', rc.lone], ['Everyone missed', rc.missed], ['Low score', rc.low], ['Leader after the week', rc.leader]];
-    $('facts').replaceChildren(...(rc.empty ? [el('dd', 'Waiting on results.')] : facts.flatMap(([k, v]) => {
-      const dd = el('dd'); (Array.isArray(v) ? v : [v]).forEach((line) => dd.append(el('div', line))); return [el('dt', k), dd];
-    })));
-
     // game results
     $('games-table').tBodies[0].replaceChildren(...games.map((g) => {
       const tr = el('tr');
@@ -335,23 +332,6 @@
       return tr;
     }));
 
-    // every pick
-    const players = state.seasonPlayers;
-    const gr = S.grid(state.rows, state.week, players);
-    const head = el('tr');
-    ['Game', 'Line', 'Result', ...players].forEach((h) => head.append(el('th', h)));
-    $('picks-table').tHead.replaceChildren(head);
-    $('picks-table').tBodies[0].replaceChildren(...gr.map((r) => {
-      const tr = el('tr');
-      tr.append(el('td', r.game, 'strong'), el('td', r.line), el('td', r.result));
-      players.forEach((p) => {
-        const td = el('td'); const pk = r.picks[p];
-        if (!pk) td.append(el('span', 'hidden', 'pend'));
-        else pk.forEach(([team, m], i) => { if (i) td.append(document.createTextNode(' / ')); td.append(el('span', team + ' ' + m, m === '✓' ? 'ok' : m === '✗' ? 'no' : 'pend')); });
-        tr.append(td);
-      });
-      return tr;
-    }));
   }
 
   function renderStats() {

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261029f">
+<link rel="stylesheet" href="styles.css?v=20261029h">
 </head>
 <body>
 <div class="wrap">
@@ -51,7 +51,7 @@
         <div class="tile"><span class="label">🎯 Straight-up leader</span><span class="big" id="k-su">–</span><span class="val" id="k-su-val"></span><span class="sub" id="k-su-sub"></span></div>
         <div class="tile"><span class="label">📊 Spread specialist</span><span class="big" id="k-ats">–</span><span class="val" id="k-ats-val"></span><span class="sub" id="k-ats-sub"></span></div>
         <div class="tile"><span class="label">⚖️ Over/under leader</span><span class="big" id="k-ou">–</span><span class="val" id="k-ou-val"></span><span class="sub" id="k-ou-sub"></span></div>
-        <div class="tile"><span class="label">⚡ Sweep king</span><span class="big" id="k-sw">–</span><span class="val" id="k-sw-val"></span><span class="sub" id="k-sw-sub"></span></div>
+        <div class="tile"><span class="label" id="k-sw-label">⚡ Sweep king</span><span class="big" id="k-sw">–</span><span class="val" id="k-sw-val"></span><span class="sub" id="k-sw-sub"></span></div>
         <div class="tile"><span class="label">📅 Most weeks won</span><span class="big" id="k-ww">–</span><span class="val" id="k-ww-val"></span><span class="sub" id="k-ww-sub"></span></div>
       </div>
 
@@ -120,19 +120,13 @@
         <div id="writeup-body"></div>
       </article>
 
-      <div class="grid-main">
-        <div class="card">
-          <h2>Week leaderboard</h2>
-          <div class="scroll"><table class="tbl" id="week-table">
-            <thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>Winners</th><th>Spreads</th><th>O/U</th><th>Sweeps</th><th>Accuracy</th><th>Season</th></tr></thead>
-            <tbody></tbody>
-          </table></div>
-          <p class="note">Points: one per correct pick plus a bonus point for each game where all three picks were right.</p>
-        </div>
-        <div class="card">
-          <h2>Week in review</h2>
-          <dl class="facts" id="facts"></dl>
-        </div>
+      <div class="card">
+        <h2>Week leaderboard</h2>
+        <div class="scroll"><table class="tbl" id="week-table">
+          <thead><tr><th>Rank</th><th>Player</th><th>Points</th><th>Winners</th><th>Spreads</th><th>O/U</th><th>Sweeps</th><th>Accuracy</th><th>Season</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <p class="note">Points: one per correct pick plus a bonus point for each game where all three picks were right.</p>
       </div>
 
       <div class="card">
@@ -143,13 +137,6 @@
         </table></div>
       </div>
 
-      <div class="card">
-        <h2>Every pick</h2>
-        <p class="note">Each cell is winner / spread / over-under. <span class="ok">✓</span> right, <span class="no">✗</span> wrong, · not final yet. Picks for games that haven't kicked off stay hidden.</p>
-        <div class="scroll"><table class="tbl picks" id="picks-table">
-          <thead></thead><tbody></tbody>
-        </table></div>
-      </div>
     </section>
 
     <!-- ============ MY PICKS ============ -->
@@ -243,10 +230,10 @@
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="config.js?v=20261029f"></script>
-<script src="scoring.js?v=20261029f"></script>
-<script src="app.js?v=20261029f"></script>
-<script src="picks.js?v=20261029f"></script>
+<script src="config.js?v=20261029h"></script>
+<script src="scoring.js?v=20261029h"></script>
+<script src="app.js?v=20261029h"></script>
+<script src="picks.js?v=20261029h"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   (function () {

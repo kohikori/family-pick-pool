@@ -6,4 +6,6 @@ window.POOL_CONFIG = {
   supabaseAnonKey: 'sb_publishable_qvwgLUhLhZlI7dXoVtux4Q_slIaepNA',
   defaultSeason: 2026,
   players: ['CGF', 'LPF', 'ATF', 'ASL', 'WSL', 'CGF II'],
+  // Players whose title shows as "Sweep queen" (a tie between a queen and a king shows "Sweep royalty").
+  sweepQueens: ['ATF', 'LPF'],
 };
