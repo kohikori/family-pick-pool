@@ -129,9 +129,31 @@
     if (!id) return null;
     if (cache.depth[team] !== undefined && fresh('d' + team)) return cache.depth[team];
     let d = null;
-    try { d = readDepth(await getJSON('https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/' + id + '/depthcharts')); } catch (e) { d = null; }
+    try {
+      const j = await getJSON('https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/' + id + '/depthcharts');
+      d = readDepth(j);
+      if (DEBUG && !d) why[team] = 'read no QBs. ' + shape(j);
+    } catch (e) { d = null; if (DEBUG) why[team] = 'request failed (' + (e.message || e) + ')'; }
     cache.depth[team] = d; cache.at['d' + team] = Date.now();
     return d;
+  }
+
+  // ---------- diagnostics (only with ?debug) ----------
+  const why = {};
+  // A compact outline of a JSON response: top keys, then the first item's keys a few levels down.
+  function shape(j, depth = 0) {
+    if (j == null || typeof j !== 'object' || depth > 4) return JSON.stringify(j).slice(0, 40);
+    if (Array.isArray(j)) return '[' + j.length + ']' + (j.length ? ' ' + shape(j[0], depth + 1) : '');
+    const ks = Object.keys(j);
+    const big = ks.find((k) => j[k] && typeof j[k] === 'object' && Object.keys(j[k]).length) ;
+    return '{' + ks.slice(0, 8).join(',') + (ks.length > 8 ? ',…' : '') + '}' + (big ? ' ' + big + '→' + shape(j[big], depth + 1) : '');
+  }
+  async function probeTeamInjuries(team) {
+    const id = teamIds[team];
+    try {
+      const j = await getJSON('https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/' + id + '/injuries');
+      return 'team injury list: ' + shape(j);
+    } catch (e) { return 'team injury list: request failed (' + (e.message || e) + ')'; }
   }
 
   const same = (a, b) => (a.id && b.id ? a.id === b.id : a.name === b.name);
@@ -169,8 +191,9 @@
     if (DEBUG) {
       const d = (t, dep) => t + ': ' + (inj[t] || []).length + ' on injury list' +
         ((inj[t] || []).filter((x) => x.pos === 'QB').map((x) => ' [' + x.name + ' ' + x.status + ']').join('') || '') +
-        ' · depth chart ' + (dep ? 'QBs ' + dep.QB.map((x) => x.name).join(' > ') : 'not read (team id ' + (teamIds[t] || 'missing') + ')');
+        ' · depth chart ' + (dep ? 'QBs ' + dep.QB.map((x) => x.name).join(' > ') : 'not read (team id ' + (teamIds[t] || 'missing') + '): ' + (why[t] || '?'));
       out.push('🔧 event ' + id + ' · ' + d(g.away, da) + ' | ' + d(g.home, dh));
+      out.push('🔧 ' + g.home + ' ' + await probeTeamInjuries(g.home));
     }
     const qbs = [g.away, g.home].filter((t) => notes[t].qb).map((t) => t + ' ' + notes[t].qb);
     if (qbs.length) out.push('🏈 QB: ' + qbs.join(' · '));
