@@ -202,6 +202,21 @@
     $('pk-progress').textContent = games.length ? picked + ' of ' + games.length + ' games picked' + (st.target !== st.me.code ? ' for ' + st.target : '') : '';
     if (!games.length) { box.replaceChildren(el('p', 'No games have been added for this week yet. Your line-setters add them on the Set lines tab.', 'note')); return; }
     box.replaceChildren(...games.map(gameCard));
+    if (window.PoolExtras) window.PoolExtras.load(games, SEASON, updateNotes);
+  }
+
+  // Weather and injury notes (extras.js). Updated in place so nothing jumps while someone is picking.
+  function notesFor(g) {
+    const box = el('div', null, 'gc-notes');
+    box.dataset.notes = g.id;
+    const lines = window.PoolExtras ? window.PoolExtras.lines(g) : [];
+    box.hidden = !lines.length;
+    lines.forEach((t) => box.append(el('div', t, 'gc-note')));
+    return box;
+  }
+  function updateNotes(g) {
+    const old = document.querySelector('[data-notes="' + g.id + '"]');
+    if (old) old.replaceWith(notesFor(g));
   }
 
   // Team logo from ESPN's image server; hides itself if a logo is missing.
@@ -244,6 +259,7 @@
     when.append(el('span', g.kickoff ? fmtKick(g.kickoff) : '', 'gc-kick'), el('span', g.kickoff ? (isLocked ? '🔒 Locked' : untilText(g.kickoff)) : '🔒 Locked', isLocked ? 'gc-lock' : 'gc-until'));
     head.append(title, when);
     card.append(head);
+    card.append(notesFor(g));
     if (!hasLine) {
       card.append(el('p', 'Lines not posted yet.', 'note'));
       return card;
