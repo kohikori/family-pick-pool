@@ -1,0 +1,35 @@
+name: Weekly recap
+
+# Runs Tuesday morning after Monday Night Football, with two retries in case a game
+# ran late or ESPN was slow. Each run does nothing if the recap is already written.
+# Times are UTC: 11:30 UTC is 7:30am Eastern (6:30am in winter).
+on:
+  schedule:
+    - cron: '30 11 * * 2'
+    - cron: '30 17 * * 2'
+    - cron: '30 11 * * 3'
+  workflow_dispatch:
+    inputs:
+      week:
+        description: 'Week number to recap (leave blank for the latest week)'
+        required: false
+      force:
+        description: 'Rewrite the recap even if one exists'
+        type: boolean
+        default: false
+
+jobs:
+  recap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Get final scores and write the recap
+        run: node scripts/weekly-recap.mjs
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WEEK: ${{ inputs.week }}
+          FORCE: ${{ inputs.force }}
