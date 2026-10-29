@@ -204,10 +204,23 @@
     box.replaceChildren(...games.map(gameCard));
   }
 
-  function tile(label, chosen, disabled, onClick, sub) {
+  // Team logo from ESPN's image server; hides itself if a logo is missing.
+  const ESPN_LOGO = {WAS: 'wsh'};
+  function logo(team, cls) {
+    const img = document.createElement('img');
+    img.src = 'https://a.espncdn.com/i/teamlogos/nfl/500/' + (ESPN_LOGO[team] || team.toLowerCase()) + '.png';
+    img.alt = ''; img.className = cls || 'logo'; img.loading = 'lazy'; img.decoding = 'async';
+    img.onerror = () => img.remove();
+    return img;
+  }
+
+  function tile(label, chosen, disabled, onClick, sub, team) {
     const b = el('button', null, 'pick-tile' + (chosen ? ' on' : ''));
     b.type = 'button';
-    b.append(el('span', label, 'pt-main'));
+    const main = el('span', null, 'pt-main');
+    if (team) main.append(logo(team));
+    main.append(document.createTextNode(label));
+    b.append(main);
     if (sub) b.append(el('span', sub, 'pt-sub'));
     b.disabled = disabled;
     b.setAttribute('aria-pressed', String(!!chosen));
@@ -223,7 +236,9 @@
     // header
     const head = el('div', null, 'gc-head');
     const title = el('div', null, 'gc-title');
-    title.append(el('span', g.away + ' @ ' + g.home, 'gc-teams'));
+    const teams = el('span', null, 'gc-teams');
+    teams.append(logo(g.away), document.createTextNode(g.away + ' @ '), logo(g.home), document.createTextNode(g.home));
+    title.append(teams);
     if (hasLine) title.append(el('span', g.favorite + ' −' + n(g.spread) + ' · O/U ' + n(g.total), 'gc-line'));
     const when = el('div', null, 'gc-when');
     when.append(el('span', g.kickoff ? fmtKick(g.kickoff) : '', 'gc-kick'), el('span', g.kickoff ? (isLocked ? '🔒 Locked' : untilText(g.kickoff)) : '🔒 Locked', isLocked ? 'gc-lock' : 'gc-until'));
@@ -255,8 +270,8 @@
     };
     const row = (label, tiles) => { const r = el('div', null, 'gc-row'); r.append(el('span', label, 'gc-rlabel')); const t = el('div', null, 'gc-tiles'); t.append(...tiles); r.append(t); return r; };
     card.append(
-      row('Winner', [g.away, g.home].map((t) => tile(t, d.w === t, dis, () => set('w', t), t === g.favorite ? 'favorite' : 'underdog'))),
-      row('Spread', [g.away, g.home].map((t) => tile(spreadLabel(t), d.s === t, dis, () => set('s', t)))),
+      row('Winner', [g.away, g.home].map((t) => tile(t, d.w === t, dis, () => set('w', t), t === g.favorite ? 'favorite' : 'underdog', t))),
+      row('Spread', [g.away, g.home].map((t) => tile(spreadLabel(t), d.s === t, dis, () => set('s', t), null, t))),
       row('Total', ['Over', 'Under'].map((o) => tile(o + ' ' + n(g.total), d.o === o, dis, () => set('o', o)))),
     );
     const foot = el('div', null, 'gc-foot');
