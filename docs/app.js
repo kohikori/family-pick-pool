@@ -344,7 +344,29 @@
   }
 
   // ---------- leadership chart: standings rank after each week ----------
-  const COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#6250d6', '#e34948', '#008300'];
+  const BASE_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#6250d6', '#e34948', '#008300'];
+  // On the green Field theme, greens disappear, so use light colors that read on turf.
+  const FIELD_COLORS = ['#9fd0ff', '#ffb27a', '#ffffff', '#ffd23f', '#ffb3d6', '#cbbcff', '#ff8f87', '#b6f0c3'];
+  let COLORS = BASE_COLORS;
+
+  // ---------- theme ----------
+  const themeSel = $('theme');
+  function applyTheme(t) {
+    if (t === 'field' || t === 'night') document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+    COLORS = t === 'field' ? FIELD_COLORS : BASE_COLORS;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = t === 'field' ? '#2f7a45' : '#14201a';
+  }
+  if (themeSel) {
+    let saved = 'auto';
+    try { saved = localStorage.getItem('pool-theme') || 'auto'; } catch (e) {}
+    themeSel.value = saved; applyTheme(saved);
+    themeSel.addEventListener('change', () => {
+      try { localStorage.setItem('pool-theme', themeSel.value); } catch (e) {}
+      applyTheme(themeSel.value);
+      if (state.tab === 'dashboard' && state.rows.length) drawRace();
+    });
+  }
   function drawRace() {
     const box = $('race');
     box.replaceChildren();

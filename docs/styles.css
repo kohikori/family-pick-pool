@@ -8,14 +8,41 @@
   --f-data: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   color-scheme: light;
 }
+/* Night: the dark look. Used automatically on dark-mode devices, or when picked. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: #101512; --surface: #18201b; --ink: #eef1ec; --ink-2: #bcc5bf; --muted: #8a958f;
     --line: #2a332e; --accent: #5cc28d; --accent-soft: #1d2e24;
     --ok: #4cc46f; --no: #ec6a5f; --grid: #232b26;
     color-scheme: dark;
   }
 }
+:root[data-theme="night"] {
+  --bg: #101512; --surface: #18201b; --ink: #eef1ec; --ink-2: #bcc5bf; --muted: #8a958f;
+  --line: #2a332e; --accent: #5cc28d; --accent-soft: #1d2e24;
+  --ok: #4cc46f; --no: #ec6a5f; --grid: #232b26;
+  color-scheme: dark;
+}
+/* Field: turf green, white field markings, first-down-line yellow. */
+:root[data-theme="field"] {
+  --bg: #2f7a45; --surface: #276a3a; --ink: #ffffff; --ink-2: #e4f2e8; --muted: #bfe0c8;
+  --line: #5a9a6c; --accent: #ffd23f; --accent-soft: #3a8650;
+  --ok: #ffd23f; --no: #ffb4a6; --grid: #3c8752;
+  color-scheme: dark;
+}
+:root[data-theme="field"] body {
+  /* mowing stripes */
+  background: repeating-linear-gradient(180deg, #2f7a45 0 120px, #2b7240 120px 240px) fixed;
+}
+:root[data-theme="field"] .card, :root[data-theme="field"] .tile { border-color: rgba(255,255,255,.35); }
+:root[data-theme="field"] .top { border-bottom-color: #ffffff; }
+:root[data-theme="field"] .tile.lead { background: #22603a; }
+:root[data-theme="field"] .writeup { border-left-color: var(--accent); }
+:root[data-theme="field"] .pick-tile.on { color: #17361f; }
+:root[data-theme="field"] .tab[aria-selected="true"] { border-bottom-color: var(--accent); }
+
+/* Theme picker */
+.theme-pick select { font-size: .85rem; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;

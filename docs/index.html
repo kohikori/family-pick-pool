@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Family Pick Pool</title>
 <meta name="theme-color" content="#14201a">
+<script>
+  // Apply the saved theme before the page draws, so there's no flash.
+  try { var t = localStorage.getItem('pool-theme'); if (t === 'field' || t === 'night') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -14,7 +18,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261029k">
+<link rel="stylesheet" href="styles.css?v=20261029l">
 </head>
 <body>
 <div class="wrap">
@@ -25,6 +29,14 @@
     </div>
     <div class="top-right">
       <div class="account" id="account"></div>
+      <label class="theme-pick">
+        <span class="sr-only">Look</span>
+        <select id="theme" aria-label="Look">
+          <option value="auto">Auto</option>
+          <option value="field">Field</option>
+          <option value="night">Night</option>
+        </select>
+      </label>
       <label class="season">
         <span class="sr-only">Season</span>
         <select id="season" aria-label="Season"></select>
@@ -230,11 +242,11 @@
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="config.js?v=20261029k"></script>
-<script src="scoring.js?v=20261029k"></script>
-<script src="app.js?v=20261029k"></script>
-<script src="extras.js?v=20261029k"></script>
-<script src="picks.js?v=20261029k"></script>
+<script src="config.js?v=20261029l"></script>
+<script src="scoring.js?v=20261029l"></script>
+<script src="app.js?v=20261029l"></script>
+<script src="extras.js?v=20261029l"></script>
+<script src="picks.js?v=20261029l"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   (function () {
