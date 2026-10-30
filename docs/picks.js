@@ -329,11 +329,7 @@
       b.type = 'button';
       b.addEventListener('click', async () => {
         st.panelOpen[g.id] = !open;
-        if (!open) {
-          const {data, error} = await db.from('pick_scores').select('*').eq('game_id', g.id);
-          st.panelRows[g.id] = error ? null : data || [];
-        }
-        refreshCard(g);
+        if (!open) await refreshPanel(g); else refreshCard(g);
       });
       foot.append(b);
       card.append(foot);
@@ -348,6 +344,13 @@
     foot.append(el('span', who.length ? 'Picks in: ' + who.join(', ') : 'No picks in yet', 'gc-who'));
     card.append(foot);
     return card;
+  }
+
+  // Re-read everyone's picks for an open panel (after a save, or on the regular refresh).
+  async function refreshPanel(g) {
+    const {data, error} = await db.from('pick_scores').select('*').eq('game_id', g.id);
+    if (!error) st.panelRows[g.id] = data || [];
+    refreshCard(g);
   }
 
   function refreshCard(g) {
@@ -374,6 +377,8 @@
       } else {
         st.saved[g.id] = row;
         delete st.status[g.id];
+        P.dirty = true;                 // Weekly results / Dashboard reload next time they're opened
+        if (st.panelOpen[g.id]) refreshPanel(g);
         const who = st.submitted[g.id] || (st.submitted[g.id] = []);
         if (!who.includes(st.target)) who.push(st.target);
       }
@@ -544,7 +549,10 @@
   };
   // keep countdowns and locks current
   setInterval(() => {
-    if (P.state.tab === 'picks' && st.me && !document.activeElement.closest('.game-card')) drawGames();
+    if (P.state.tab === 'picks' && st.me && !document.activeElement.closest('.game-card')) {
+      drawGames();
+      weekGames().filter((g) => st.panelOpen[g.id]).forEach(refreshPanel);
+    }
   }, 60000);
 
   db.auth.onAuthStateChange((event) => {

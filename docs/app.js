@@ -73,8 +73,8 @@
     state.players = order;
   }
 
-  async function loadSeason() {
-    $('takeaway').textContent = 'Loading ' + state.season + '…';
+  async function loadSeason(quiet) {
+    if (!quiet) $('takeaway').textContent = 'Loading ' + state.season + '…';
     const rows = await fetchAll('pick_scores', (q) => q.eq('season', state.season).order('week').order('game_no'));
     rows.forEach((r) => { r.week = Number(r.week); r.game_no = Number(r.game_no); });
     const {data: recaps} = await db.from('recaps').select('*').eq('season', state.season);
@@ -495,9 +495,11 @@
     document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
     if (name === 'dashboard' && state.rows.length) drawRace();
     if (window.POOL.onTab) window.POOL.onTab(name);
+    // Picks saved on My picks since the last load: refresh the results and standings.
+    if (window.POOL.dirty && (name === 'week' || name === 'dashboard' || name === 'stats')) { window.POOL.dirty = false; loadSeason(true); }
   }
   window.POOL.showTab = (name) => { showTab(name); history.replaceState(null, '', '#' + name); };
-  window.POOL.reload = () => loadSeason();
+  window.POOL.reload = (quiet) => loadSeason(quiet);
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => { showTab(b.dataset.tab); history.replaceState(null, '', '#' + b.dataset.tab); }));
   const h = location.hash.slice(1).split('&')[0];
   const legacy = {standings: 'dashboard', recap: 'week'};
