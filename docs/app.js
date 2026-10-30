@@ -10,6 +10,33 @@
   // Shared with picks.js (sign-in, My picks, Set lines).
   window.POOL = {db, cfg, $, el, state};
 
+  // ---------- picks panel (shared by Weekly results and My picks) ----------
+  // rows: pick_scores rows for ONE game. Shows each player's three picks with ✓ / ✗.
+  function picksPanel(rows, players) {
+    const g = rows[0] || {};
+    const mark = (r, k, res, push) => {
+      if (!r.is_final) return ['', 'pend'];
+      if (g[res] === push) return [' –', 'pend'];
+      return Number(r[k]) === 1 ? [' ✓', 'ok'] : [' ✗', 'no'];
+    };
+    const order = players.concat(rows.map((r) => r.player_code).filter((p) => !players.includes(p)));
+    const tbl = el('table', null, 'pk-panel');
+    const head = el('tr'); ['', 'Winner', 'Spread', 'O/U'].forEach((h) => head.append(el('th', h))); tbl.append(head);
+    order.forEach((p) => {
+      const r = rows.find((x) => x.player_code === p);
+      if (!r && !players.includes(p)) return;
+      const tr = el('tr'); tr.append(el('td', p, 'strong'));
+      if (!r) { const td = el('td', 'No pick', 'pend'); td.colSpan = 3; tr.append(td); tbl.append(tr); return; }
+      [['pick_winner', 'winner_pt', 'winner', 'Tie'], ['pick_spread', 'spread_pt', 'covered', 'Push'], ['pick_ou', 'ou_pt', 'over_under', 'Push']].forEach(([pick, pt, res, push]) => {
+        const [m, cls] = mark(r, pt, res, push);
+        const td = el('td'); td.append(document.createTextNode(r[pick])); if (m) td.append(el('span', m, cls)); tr.append(td);
+      });
+      tbl.append(tr);
+    });
+    return tbl;
+  }
+  window.POOL.picksPanel = picksPanel;
+
   // ---------- data ----------
   async function fetchAll(table, filter) {
     const out = [];
@@ -325,11 +352,27 @@
     $('week-table').tBodies[0].replaceChildren(...rows);
 
     // game results
-    $('games-table').tBodies[0].replaceChildren(...games.map((g) => {
-      const tr = el('tr');
-      tr.append(el('td', g.game, 'strong'), el('td', g.line), el('td', String(g.total)), el('td', g.final ? g.winner : 'Not final', g.final ? '' : 'pend'),
+    // Each game's picks open underneath its row once the game has kicked off.
+    const byGame = {};
+    state.rows.filter((r) => r.week === state.week).forEach((r) => (byGame[r.game_id] = byGame[r.game_id] || []).push(r));
+    const groups = Object.values(byGame).sort((a, b) => a[0].game_no - b[0].game_no);
+    state.openGames = state.openGames || {};
+    $('games-table').tBodies[0].replaceChildren(...games.flatMap((g, i) => {
+      const rows = groups[i] || [], id = rows[0] && rows[0].game_id;
+      const canOpen = !!(rows[0] && rows[0].is_locked);
+      const open = canOpen && state.openGames[id];
+      const tr = el('tr', null, canOpen ? 'clickable' : '');
+      const name = el('td', null, 'strong');
+      name.append(el('span', canOpen ? (open ? '▾ ' : '▸ ') : '', 'caret'), document.createTextNode(g.game));
+      tr.append(name, el('td', g.line), el('td', String(g.total)), el('td', g.final ? g.winner : 'Not final', g.final ? '' : 'pend'),
         el('td', g.covered), el('td', g.ou), el('td', g.pickedWinner));
-      return tr;
+      if (!canOpen) return [tr];
+      tr.title = open ? 'Hide picks' : 'Show everyone’s picks';
+      tr.addEventListener('click', () => { state.openGames[id] = !open; renderWeek(); });
+      if (!open) return [tr];
+      const dtr = el('tr', null, 'pk-detail'); const td = el('td'); td.colSpan = 7;
+      const wrap = el('div', null, 'pk-wrap'); wrap.append(picksPanel(rows, state.seasonPlayers)); td.append(wrap); dtr.append(td);
+      return [tr, dtr];
     }));
 
   }

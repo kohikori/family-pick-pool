@@ -225,3 +225,17 @@ input[type=email], input[type=number], input[type=datetime-local], .lines-tbl se
 /* Game-day notes: notable weather and key injuries */
 .gc-notes { display: flex; flex-direction: column; gap: 2px; margin: -2px 0 2px; font-size: .84rem; color: var(--muted); }
 .gc-note { line-height: 1.35; }
+
+/* Everyone's picks for one game (Weekly results rows and locked My picks cards) */
+.pk-panel { border-collapse: collapse; font-size: .85rem; width: auto; }
+.pk-panel th { font: 600 .68rem var(--f-data); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 4px 8px; }
+.pk-panel td { padding: 4px 8px; border-top: 1px solid var(--line); white-space: nowrap; }
+.pk-panel .ok { color: var(--ok); font-weight: 700; }
+.pk-panel .no { color: var(--no); font-weight: 700; }
+.pk-panel .pend { color: var(--muted); }
+#games-table tr.clickable { cursor: pointer; }
+#games-table tr.clickable:hover td { background: var(--accent-soft); }
+#games-table .caret { display: inline-block; width: 1.1em; color: var(--muted); }
+#games-table tr.pk-detail > td { background: var(--accent-soft); padding: 8px 12px 12px; }
+#games-table .pk-wrap { max-width: calc(100vw - 72px); overflow-x: auto; }
+.gc-panel { overflow-x: auto; }

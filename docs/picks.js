@@ -18,6 +18,8 @@
     status: {},           // game_id -> {kind, text}
     players: [],
     unlock: {},           // game_id -> true while the commissioner is editing a locked game
+    panelOpen: {},        // game_id -> true when everyone's picks are showing (locked games)
+    panelRows: {},        // game_id -> pick_scores rows for that panel
   };
   const arrivedFromLink = /access_token|code=/.test(location.hash + location.search);
 
@@ -321,6 +323,28 @@
       foot.append(b);
     }
     const who = st.submitted[g.id] || [];
+    if (isLocked && window.POOL.picksPanel) {
+      const open = !!st.panelOpen[g.id];
+      const b = el('button', (open ? '▾ Hide picks' : '▸ See everyone’s picks'), 'linkbtn gc-who');
+      b.type = 'button';
+      b.addEventListener('click', async () => {
+        st.panelOpen[g.id] = !open;
+        if (!open) {
+          const {data, error} = await db.from('pick_scores').select('*').eq('game_id', g.id);
+          st.panelRows[g.id] = error ? null : data || [];
+        }
+        refreshCard(g);
+      });
+      foot.append(b);
+      card.append(foot);
+      if (open) {
+        const rows = st.panelRows[g.id];
+        const box = el('div', null, 'gc-panel');
+        box.append(rows ? window.POOL.picksPanel(rows, st.players.length ? st.players : (window.POOL.state.seasonPlayers || [])) : el('p', 'Couldn’t load picks. Try again.', 'note'));
+        card.append(box);
+      }
+      return card;
+    }
     foot.append(el('span', who.length ? 'Picks in: ' + who.join(', ') : 'No picks in yet', 'gc-who'));
     card.append(foot);
     return card;
