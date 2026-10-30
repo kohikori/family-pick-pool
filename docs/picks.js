@@ -222,13 +222,22 @@
     if (old) old.replaceWith(notesFor(g));
   }
 
-  // Team logo from ESPN's image server; hides itself if a logo is missing.
+  // Team logos from ESPN's image server. All 32 are fetched once and kept in memory, so cards
+  // that get rebuilt (live refresh, notes) reuse them instead of starting new downloads.
+  // A logo that fails is retried twice; if it still fails, it leaves a blank space of the same size.
   const ESPN_LOGO = {WAS: 'wsh'};
+  const logoUrl = (team, n) => 'https://a.espncdn.com/i/teamlogos/nfl/500/' + (ESPN_LOGO[team] || team.toLowerCase()) + '.png' + (n ? '?r=' + n : '');
+  const logoCache = {};
+  TEAMS.forEach((t) => { const i = new Image(); i.decoding = 'async'; i.src = logoUrl(t); logoCache[t] = i; });
   function logo(team, cls) {
     const img = document.createElement('img');
-    img.src = 'https://a.espncdn.com/i/teamlogos/nfl/500/' + (ESPN_LOGO[team] || team.toLowerCase()) + '.png';
-    img.alt = ''; img.className = cls || 'logo'; img.loading = 'lazy'; img.decoding = 'async';
-    img.onerror = () => img.remove();
+    img.alt = ''; img.className = cls || 'logo'; img.decoding = 'async';
+    let tries = 0;
+    img.onerror = () => {
+      if (tries < 2) { tries += 1; setTimeout(() => { img.src = logoUrl(team, tries); }, 600 * tries); }
+      else img.style.visibility = 'hidden';
+    };
+    img.src = (logoCache[team] && logoCache[team].complete && logoCache[team].naturalWidth) ? logoCache[team].src : logoUrl(team);
     return img;
   }
 
