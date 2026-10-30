@@ -1,0 +1,29 @@
+name: QB watch
+
+# Checks ESPN for backup quarterbacks starting in the upcoming week and saves a note
+# for the My picks cards. Times are UTC: 14:00 = 10am Eastern, 22:00 = 6pm Eastern,
+# plus a Sunday-morning check (15:30 = 11:30am Eastern) for late changes.
+on:
+  schedule:
+    - cron: '0 14 * * *'
+    - cron: '0 22 * * *'
+    - cron: '30 15 * * 0'
+  workflow_dispatch:
+    inputs:
+      week:
+        description: 'Week number to check (leave blank for the upcoming week)'
+        required: false
+
+jobs:
+  qb-watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check for backup QBs
+        run: node scripts/qb-watch.mjs
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          WEEK: ${{ inputs.week }}
