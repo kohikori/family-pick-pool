@@ -17,11 +17,16 @@
 //   SKIP_SCORES=1        don't fetch scores from ESPN.
 //   RECAP_MODEL          optional. Claude model to use (default claude-sonnet-5-5).
 //   SUPABASE_URL         optional. Defaults to the URL in docs/config.js.
+//   GMAIL_USER, GMAIL_APP_PASSWORD   the pool Gmail account; needed to email the recap.
+//   EMAIL                who gets the email when a recap is written: all (default), me (commissioner only), none.
+//   RESEND=1             don't write anything; just email the week's existing recap (to whoever EMAIL says).
+//   SITE_URL             link in the email (default https://kohikori.github.io/family-pick-pool/).
 
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {buildEmail, sendEmail} from './recap-email.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
@@ -37,6 +42,8 @@ const truthy = (v) => /^(1|true|yes)$/i.test(v || '');
 const FORCE = truthy(env.FORCE), SKIP_SCORES = truthy(env.SKIP_SCORES);
 const MODEL = env.RECAP_MODEL || 'claude-sonnet-5-5';
 const PLAYER_ORDER = ['CGF', 'LPF', 'ATF', 'ASL', 'WSL', 'CGF II'];
+const EMAIL = (env.EMAIL || 'all').toLowerCase(), RESEND = truthy(env.RESEND);
+const SITE_URL = env.SITE_URL || 'https://kohikori.github.io/family-pick-pool/';
 
 if (!KEY) { console.error('SUPABASE_SECRET_KEY is not set. Add it under Settings → Secrets and variables → Actions.'); process.exit(1); }
 
@@ -184,19 +191,50 @@ Reply with only a JSON object: {"title": "...", "body": "paragraph one\\n\\npara
   return {title: String(out.title).slice(0, 120), body: String(out.body).trim()};
 }
 
+// ---------- email ----------
+async function emailRecap(season, facts, recap) {
+  if (EMAIL === 'none') { console.log('Email: skipped (EMAIL=none).'); return; }
+  const people = await api('/players?select=code,email,is_admin&active=is.true&email=not.is.null');
+  const to = people.filter((p) => EMAIL !== 'me' || p.is_admin).map((p) => p.email).filter(Boolean);
+  if (!to.length) { console.log('Email: nobody to send to (no player emails on file).'); return; }
+  const players = [...new Set([...PLAYER_ORDER, ...facts.week_scores.map((r) => r.player)])];
+  const msg = buildEmail({season, label: facts.label, recap, players, siteUrl: SITE_URL,
+    standings: facts.standings_after_week.map((r) => ({player: r.player, points: r.points, behind: r.behind, weeksWon: r.weeks_won})),
+    weekScores: facts.week_scores.filter((r) => r.games_picked > 0)});
+  try {
+    await sendEmail({to: to.join(', '), ...msg});
+    console.log(`Email: sent "${msg.subject}" to ${to.length} ${to.length === 1 ? 'person' : 'people'} (${people.filter((p) => to.includes(p.email)).map((p) => p.code).join(', ')}).`);
+  } catch (e) {
+    console.error('Email failed: ' + (e.message || e));
+    process.exitCode = 1;
+  }
+}
+
 // ---------- main ----------
 (async () => {
   const {season, week, games} = await pickSeasonAndWeek();
   if (!week) { console.log(`No ${season} games have started yet. Nothing to do.`); return; }
+
+  const loadFacts = async () => {
+    const rows = await getAll(`/pick_scores?select=*&season=eq.${season}&order=week,game_no`);
+    rows.forEach((r) => { r.week = Number(r.week); r.game_no = Number(r.game_no); });
+    return buildFacts(rows, season, week);
+  };
+
+  if (RESEND) {
+    const [saved] = await api(`/recaps?select=title,body_md&season=eq.${season}&week=eq.${week}`);
+    if (!saved) { console.log(`No recap saved for ${season} week ${week}, so nothing to resend.`); return; }
+    await emailRecap(season, await loadFacts(), {title: saved.title, body: saved.body_md});
+    return;
+  }
+
   const n = await updateScores(season, week, games);
   if (n) console.log(`Entered ${n} final score(s) from ESPN for week ${week}.`);
 
   const existing = await api(`/recaps?select=week&season=eq.${season}&week=eq.${week}`);
   if (existing.length && !FORCE) { console.log(`A recap for ${season} week ${week} already exists. Use FORCE=1 to rewrite it.`); return; }
 
-  const rows = await getAll(`/pick_scores?select=*&season=eq.${season}&order=week,game_no`);
-  rows.forEach((r) => { r.week = Number(r.week); r.game_no = Number(r.game_no); });
-  const facts = buildFacts(rows, season, week);
+  const facts = await loadFacts();
   const status = await api(`/game_results?select=id,is_final&season=eq.${season}&week=eq.${week}`);
   facts.games_total = status.length;
   facts.games_final = status.filter((g) => g.is_final).length;
@@ -218,5 +256,6 @@ Reply with only a JSON object: {"title": "...", "body": "paragraph one\\n\\npara
     headers: {Prefer: 'resolution=merge-duplicates,return=minimal'},
     body: JSON.stringify({season, week, title: recap.title, body_md: recap.body, created_at: new Date().toISOString()}),
   });
-  console.log(`Saved ${season} ${facts.label} recap (written by ${by}):\n\n${recap.title}\n\n${recap.body}`);
+  console.log(`Saved ${season} ${facts.label} recap (written by ${by}):\n\n${recap.title}\n\n${recap.body}\n`);
+  await emailRecap(season, facts, recap);
 })().catch((e) => { console.error(e.message || e); process.exit(1); });
