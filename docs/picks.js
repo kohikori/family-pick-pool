@@ -17,6 +17,7 @@
     submitted: {},        // game_id -> [player codes]
     status: {},           // game_id -> {kind, text}
     players: [],
+    unlock: {},           // game_id -> true while the commissioner is editing a locked game
   };
   const arrivedFromLink = /access_token|code=/.test(location.hash + location.search);
 
@@ -125,7 +126,7 @@
   // ---------- data ----------
   async function loadGames() {
     const {data, error} = await db.from('games')
-      .select('id, season, week, week_label, game_no, away, home, kickoff, favorite, spread, total, home_score, away_score, legacy_winner')
+      .select('id, season, week, week_label, game_no, away, home, neutral_site, kickoff, favorite, spread, total, home_score, away_score, legacy_winner')
       .eq('season', SEASON).order('week').order('kickoff', {nullsFirst: true}).order('game_no');
     if (error) throw error;
     st.games = data;
@@ -264,15 +265,26 @@
       card.append(el('p', 'Lines not posted yet.', 'note'));
       return card;
     }
-    const dis = isLocked;
-    const set = (k, v) => { st.draft[g.id] = {...(st.draft[g.id] || {}), [k]: v}; refreshCard(g); maybeSave(g); };
+    // Commissioner can reopen a locked game's picks to fix them.
+    const isAdmin = !!(st.me && st.me.is_admin);
+    const unlocked = isLocked && isAdmin && st.unlock[g.id];
+    const dis = isLocked && !unlocked;
+    // An underdog that wins outright also covers, and a favorite that covers also wins,
+    // so those picks move together. (Favorite to win + underdog to cover is fine: the hedge.)
+    const pk = !Number(g.spread);
+    const set = (k, v) => {
+      const nd = {...(st.draft[g.id] || {}), [k]: v};
+      if (k === 'w' && (pk || v !== g.favorite)) nd.s = v;
+      if (k === 's' && (pk || v === g.favorite)) nd.w = v;
+      st.draft[g.id] = nd; refreshCard(g); maybeSave(g);
+    };
     const fill = (kind) => {
       const fav = g.favorite, dg = dog(g);
       const map = {fav: [fav, fav], hedge: [fav, dg], upset: [dg, dg]}[kind];
       st.draft[g.id] = {...(st.draft[g.id] || {}), w: map[0], s: map[1]};
       refreshCard(g); maybeSave(g);
     };
-    if (!dis) {
+    if (!isLocked) {
       const q = el('div', null, 'gc-quick');
       [['fav', 'Favorite both ways'], ['hedge', 'Hedge my bet'], ['upset', 'Upset']].forEach(([k, label]) => {
         const b = el('button', label, 'chip'); b.type = 'button'; b.addEventListener('click', () => fill(k)); q.append(b);
@@ -293,11 +305,21 @@
     const foot = el('div', null, 'gc-foot');
     const stt = st.status[g.id];
     let text, kind;
-    if (stt) { text = stt.text; kind = stt.kind; }
+    const impossible = d.w && d.s && d.w !== d.s && (pk || d.w !== g.favorite);
+    if (stt && stt.kind !== 'ok') { text = stt.text; kind = stt.kind; }
+    else if (impossible) { text = '⚠ ' + d.w + ' can’t win without covering. ' + (!isLocked || unlocked ? 'Tap a pick to fix.' : isAdmin ? 'Use Commissioner edit to fix.' : 'Ask the commissioner to fix.'); kind = 'warn'; }
+    else if (unlocked && st.saved[g.id]) { text = 'Commissioner edit: changes save right away'; kind = 'ok'; }
+    else if (stt) { text = stt.text; kind = stt.kind; }
     else if (st.saved[g.id]) { text = 'Saved ✓'; kind = 'ok'; }
     else if (isLocked) { text = st.target === st.me.code ? 'No pick made' : 'No pick (or hidden)'; kind = 'muted'; }
     else { const left = ['w', 's', 'o'].filter((k) => !d[k]).length; text = left === 3 ? 'Not picked yet' : 'Pick ' + left + ' more to save'; kind = 'todo'; }
     foot.append(el('span', text, 'gc-status ' + kind));
+    if (isLocked && isAdmin && g.favorite) {
+      const b = el('button', unlocked ? 'Done' : '🔓 Commissioner edit', 'chip');
+      b.type = 'button';
+      b.addEventListener('click', () => { st.unlock[g.id] = !unlocked; refreshCard(g); });
+      foot.append(b);
+    }
     const who = st.submitted[g.id] || [];
     foot.append(el('span', who.length ? 'Picks in: ' + who.join(', ') : 'No picks in yet', 'gc-who'));
     card.append(foot);

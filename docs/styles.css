@@ -186,7 +186,7 @@ input[type=email], input[type=number], input[type=datetime-local], .lines-tbl se
 .pt-sub { font: 500 .66rem var(--f-data); letter-spacing: .05em; text-transform: uppercase; opacity: .75; }
 .gc-foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .8rem; border-top: 1px solid var(--line); padding-top: 8px; }
 .gc-status.ok { color: var(--ok); font-weight: 600; }
-.gc-status.err { color: var(--no); font-weight: 600; }
+.gc-status.err, .gc-status.warn { color: var(--no); font-weight: 600; }
 .gc-status.todo, .gc-status.busy { color: var(--ink-2); }
 .gc-status.muted, .gc-who { color: var(--muted); }
 
