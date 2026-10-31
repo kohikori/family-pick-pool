@@ -194,7 +194,8 @@ input[type=email], input[type=number], input[type=datetime-local], .lines-tbl se
 .lines-tbl td { vertical-align: middle; text-align: left; }
 .lines-tbl th { text-align: left; }
 .num-in { width: 76px; }
-.row-msg { display: block; font-size: .76rem; margin-top: 4px; color: var(--ink-2); white-space: normal; max-width: 200px; }
+.row-msg { display: block; font-size: .76rem; color: var(--ink-2); white-space: normal; width: 170px; }
+.lines-tbl td:last-child, .lines-tbl th:last-child { width: 170px; min-width: 170px; }
 .row-msg.ok { color: var(--ok); } .row-msg.err { color: var(--no); }
 .add-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
 .add-row label { display: flex; flex-direction: column; gap: 4px; font: 500 .72rem var(--f-data); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }

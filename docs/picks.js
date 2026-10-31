@@ -441,8 +441,10 @@
       // Autosave: each row saves itself shortly after you stop typing, like picks do.
       const say = (text, kind) => { msg.textContent = text; msg.className = 'row-msg' + (kind ? ' ' + kind : ''); };
       let timer = null;
-      const saveRow = async () => {
+      const saveRow = async (leaving) => {
         timer = null; delete lnPending[g.id];
+        const editing = !leaving && tr.contains(document.activeElement);
+        const remind = (text) => say(editing ? 'Editing…' : text);
         const upd = {
           kickoff: fromLocalInput(kick.value),
           favorite: fav.value || null,
@@ -451,9 +453,9 @@
           away_score: as.value === '' ? null : Number(as.value),
           home_score: hs.value === '' ? null : Number(hs.value),
         };
-        if ((upd.away_score == null) !== (upd.home_score == null)) return say('Enter both scores to save them.');
-        if (upd.favorite && (upd.spread == null || upd.total == null)) return say('Add the spread and total to save the line.');
-        if (!upd.favorite && (upd.spread != null || upd.total != null)) return say('Pick the favorite to save the line.');
+        if ((upd.away_score == null) !== (upd.home_score == null)) return remind('Enter both scores to save them.');
+        if (upd.favorite && (upd.spread == null || upd.total == null)) return remind('Add the spread and total to save the line.');
+        if (!upd.favorite && (upd.spread != null || upd.total != null)) return remind('Pick the favorite to save the line.');
         const norm = (k, v) => (v == null ? '' : k === 'kickoff' ? String(new Date(v).getTime()) : k === 'favorite' ? v : String(Number(v)));
         const changed = Object.fromEntries(Object.entries(upd).filter(([k, v]) => norm(k, v) !== norm(k, g[k])));
         if (!Object.keys(changed).length) return say(msg.textContent === 'Editing…' ? '' : msg.textContent, msg.className.includes('ok') ? 'ok' : '');
@@ -469,6 +471,11 @@
         i.addEventListener('input', () => schedule(900));
         i.addEventListener('change', () => schedule(150));
       });
+      // Leaving the row: save now, or explain what's missing.
+      tr.addEventListener('focusout', () => setTimeout(() => {
+        if (tr.contains(document.activeElement)) return;
+        if (timer || msg.textContent === 'Editing…') { clearTimeout(timer); saveRow(true); }
+      }, 0));
       const gameTd = el('td', null, 'strong'); gameTd.append(el('div', g.away + ' @ ' + g.home), el('div', history ? 'from the spreadsheet' : '', 'note'));
       const td = (child) => { const c = el('td'); c.append(child); return c; };
       const last = el('td'); last.append(msg);
