@@ -420,6 +420,10 @@
     drawLines();
   }
 
+  // Rows with an edit still waiting to save (so we can warn before leaving the page).
+  const lnPending = {};
+  window.addEventListener('beforeunload', (e) => { if (Object.keys(lnPending).length) { e.preventDefault(); e.returnValue = ''; } });
+
   function drawLines() {
     const games = st.games.filter((g) => g.week === st.lnWeek);
     const tb = $('ln-table').tBodies[0];
@@ -431,12 +435,14 @@
       const fav = el('select'); fav.append(new Option('—', ''), new Option(g.away, g.away), new Option(g.home, g.home)); fav.value = g.favorite || '';
       const num = (v, step) => { const i = el('input'); i.type = 'number'; i.step = step; i.min = '0'; i.inputMode = 'decimal'; i.value = v == null ? '' : Number(v); i.className = 'num-in'; return i; };
       const sp = num(g.spread, '0.5'), tot = num(g.total, '0.5'), as = num(g.away_score, '1'), hs = num(g.home_score, '1');
-      const save = el('button', 'Save', 'btn small'); save.type = 'button';
       const msg = el('span', '', 'row-msg');
       const inputs = [kick, fav, sp, tot, as, hs];
       if (history) inputs.forEach((i) => { i.disabled = true; });
-      save.disabled = !!history;
-      save.addEventListener('click', async () => {
+      // Autosave: each row saves itself shortly after you stop typing, like picks do.
+      const say = (text, kind) => { msg.textContent = text; msg.className = 'row-msg' + (kind ? ' ' + kind : ''); };
+      let timer = null;
+      const saveRow = async () => {
+        timer = null; delete lnPending[g.id];
         const upd = {
           kickoff: fromLocalInput(kick.value),
           favorite: fav.value || null,
@@ -445,19 +451,27 @@
           away_score: as.value === '' ? null : Number(as.value),
           home_score: hs.value === '' ? null : Number(hs.value),
         };
-        if ((upd.away_score == null) !== (upd.home_score == null)) { msg.textContent = 'Enter both scores.'; msg.className = 'row-msg err'; return; }
-        if (upd.favorite && (upd.spread == null || upd.total == null)) { msg.textContent = 'Add the spread and total too.'; msg.className = 'row-msg err'; return; }
-        save.disabled = true; msg.textContent = 'Saving…'; msg.className = 'row-msg';
-        const {error} = await db.from('games').update(upd).eq('id', g.id);
-        save.disabled = false;
-        if (error) { msg.textContent = friendly(error); msg.className = 'row-msg err'; return; }
-        Object.assign(g, upd);
-        msg.textContent = 'Saved ✓'; msg.className = 'row-msg ok';
-        if (upd.home_score != null) P.reload();
+        if ((upd.away_score == null) !== (upd.home_score == null)) return say('Enter both scores to save them.');
+        if (upd.favorite && (upd.spread == null || upd.total == null)) return say('Add the spread and total to save the line.');
+        if (!upd.favorite && (upd.spread != null || upd.total != null)) return say('Pick the favorite to save the line.');
+        const norm = (k, v) => (v == null ? '' : k === 'kickoff' ? String(new Date(v).getTime()) : k === 'favorite' ? v : String(Number(v)));
+        const changed = Object.fromEntries(Object.entries(upd).filter(([k, v]) => norm(k, v) !== norm(k, g[k])));
+        if (!Object.keys(changed).length) return say(msg.textContent === 'Editing…' ? '' : msg.textContent, msg.className.includes('ok') ? 'ok' : '');
+        say('Saving…');
+        const {error} = await db.from('games').update(changed).eq('id', g.id);
+        if (error) return say(friendly(error), 'err');
+        Object.assign(g, changed);
+        say('Saved ✓', 'ok');
+        if ('home_score' in changed || 'away_score' in changed) P.reload(true);
+      };
+      const schedule = (delay) => { clearTimeout(timer); lnPending[g.id] = true; say('Editing…'); timer = setTimeout(saveRow, delay); };
+      inputs.forEach((i) => {
+        i.addEventListener('input', () => schedule(900));
+        i.addEventListener('change', () => schedule(150));
       });
       const gameTd = el('td', null, 'strong'); gameTd.append(el('div', g.away + ' @ ' + g.home), el('div', history ? 'from the spreadsheet' : '', 'note'));
       const td = (child) => { const c = el('td'); c.append(child); return c; };
-      const last = el('td'); last.append(save, msg);
+      const last = el('td'); last.append(msg);
       tr.append(gameTd, td(kick), td(fav), td(sp), td(tot), td(as), td(hs), last);
       return tr;
     }));
@@ -511,7 +525,7 @@
           added++;
         }
       }
-      msg.textContent = 'Added ' + added + ' game' + (added === 1 ? '' : 's') + (moved ? ', updated ' + moved + ' kickoff time' + (moved === 1 ? '' : 's') : '') + '. Now set the lines and click Save on each.';
+      msg.textContent = 'Added ' + added + ' game' + (added === 1 ? '' : 's') + (moved ? ', updated ' + moved + ' kickoff time' + (moved === 1 ? '' : 's') : '') + '. Now set the lines; each row saves automatically.';
       await renderLines();
     } catch (e) {
       msg.textContent = 'Couldn’t load from ESPN (' + friendly(e) + '). You can add games by hand below.';
