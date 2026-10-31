@@ -266,7 +266,6 @@
     const teams = el('span', null, 'gc-teams');
     teams.append(logo(g.away), document.createTextNode(g.away + ' @ '), logo(g.home), document.createTextNode(g.home));
     title.append(teams);
-    if (hasLine) title.append(el('span', g.favorite + ' −' + n(g.spread) + ' · O/U ' + n(g.total), 'gc-line'));
     const when = el('div', null, 'gc-when');
     when.append(el('span', g.kickoff ? fmtKick(g.kickoff) : '', 'gc-kick'), el('span', g.kickoff ? (isLocked ? '🔒 Locked' : untilText(g.kickoff)) : '🔒 Locked', isLocked ? 'gc-lock' : 'gc-until'));
     head.append(title, when);
@@ -424,7 +423,12 @@
   const lnPending = {};
   window.addEventListener('beforeunload', (e) => { if (Object.keys(lnPending).length) { e.preventDefault(); e.returnValue = ''; } });
 
+  // Each row's score-lock check; re-run every 30 seconds so boxes open right at kickoff.
+  let lnLocks = [];
+  setInterval(() => lnLocks.forEach((f) => f()), 30000);
+
   function drawLines() {
+    lnLocks = [];
     const games = st.games.filter((g) => g.week === st.lnWeek);
     const tb = $('ln-table').tBodies[0];
     if (!games.length) { tb.replaceChildren(); const tr = el('tr'); const td = el('td', 'No games this week yet. Use “Load schedule from ESPN” or add them below.', 'note'); td.colSpan = 8; tr.append(td); tb.append(tr); return; }
@@ -438,6 +442,18 @@
       const msg = el('span', '', 'row-msg');
       const inputs = [kick, fav, sp, tot, as, hs];
       if (history) inputs.forEach((i) => { i.disabled = true; });
+      // Score boxes stay locked until the game kicks off (by its saved kickoff time).
+      const scoreLock = () => {
+        const before = !history && (!g.kickoff || new Date(g.kickoff) > new Date());
+        [as, hs].forEach((i) => {
+          if (history) return;
+          i.disabled = before;
+          i.placeholder = before ? '🔒' : '';
+          i.title = before ? 'Scores open at kickoff' : '';
+        });
+      };
+      scoreLock();
+      lnLocks.push(scoreLock);
       // Autosave: each row saves itself shortly after you stop typing, like picks do.
       const say = (text, kind) => { msg.textContent = text; msg.className = 'row-msg' + (kind ? ' ' + kind : ''); };
       let timer = null;
@@ -464,6 +480,8 @@
         if (error) return say(friendly(error), 'err');
         Object.assign(g, changed);
         say('Saved ✓', 'ok');
+        setTimeout(() => { if (msg.textContent === 'Saved ✓') { msg.classList.add('fade'); setTimeout(() => { if (msg.textContent === 'Saved ✓') say(''); }, 600); } }, 2500);
+        if ('kickoff' in changed) scoreLock();
         if ('home_score' in changed || 'away_score' in changed) P.reload(true);
       };
       const schedule = (delay) => { clearTimeout(timer); lnPending[g.id] = true; say('Editing…'); timer = setTimeout(saveRow, delay); };
