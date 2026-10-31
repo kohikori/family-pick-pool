@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261031e">
+<link rel="stylesheet" href="styles.css?v=20261031g">
 </head>
 <body>
 <div class="wrap">
@@ -184,15 +184,6 @@
           <span class="note" id="pk-progress"></span>
         </div>
         <p class="note warn" id="pk-for-note" hidden>You're entering picks for someone else. Their picks for games that haven't started stay hidden (secret ballot), so anything you save here replaces whatever they had.</p>
-        <div class="card fillbar" id="pk-fillbar">
-          <span class="label">Fill every open game</span>
-          <div class="fill-btns">
-            <button class="btn" type="button" data-fill-all="fav">Favorite both ways</button>
-            <button class="btn" type="button" data-fill-all="hedge">Hedge my bet</button>
-            <button class="btn" type="button" data-fill-all="upset">Upset</button>
-          </div>
-          <span class="note">Sets the winner and spread picks only. Over/unders are always yours to choose. A game saves once all three picks are set.</span>
-        </div>
         <div id="pk-games" class="games"></div>
       </div>
     </section>
@@ -242,11 +233,11 @@
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="config.js?v=20261031e"></script>
-<script src="scoring.js?v=20261031e"></script>
-<script src="app.js?v=20261031e"></script>
-<script src="extras.js?v=20261031e"></script>
-<script src="picks.js?v=20261031e"></script>
+<script src="config.js?v=20261031g"></script>
+<script src="scoring.js?v=20261031g"></script>
+<script src="app.js?v=20261031g"></script>
+<script src="extras.js?v=20261031g"></script>
+<script src="picks.js?v=20261031g"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   (function () {

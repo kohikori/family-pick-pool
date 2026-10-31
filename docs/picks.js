@@ -199,8 +199,6 @@
     const box = $('pk-games');
     const games = weekGames();
     $('pk-for-note').hidden = !(st.me && st.target !== st.me.code);
-    const open = games.filter((g) => !locked(g) && g.favorite);
-    $('pk-fillbar').hidden = !open.length;
     const picked = games.filter((g) => st.saved[g.id]).length;
     $('pk-progress').textContent = games.length ? picked + ' of ' + games.length + ' games picked' + (st.target !== st.me.code ? ' for ' + st.target : '') : '';
     if (!games.length) { box.replaceChildren(el('p', 'No games have been added for this week yet. Your line-setters add them on the Set lines tab.', 'note')); return; }
@@ -394,15 +392,7 @@
     }, 350);
   }
 
-  function fillAll(kind) {
-    weekGames().filter((g) => !locked(g) && g.favorite).forEach((g) => {
-      const fav = g.favorite, dg = dog(g);
-      const map = {fav: [fav, fav], hedge: [fav, dg], upset: [dg, dg]}[kind];
-      st.draft[g.id] = {...(st.draft[g.id] || {}), w: map[0], s: map[1]};
-      maybeSave(g);
-    });
-    drawGames();
-  }
+
 
   // ---------- Set lines page ----------
   async function renderLines() {
@@ -585,7 +575,6 @@
   $('signin-email').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendLink(); });
   $('signin-verify').addEventListener('click', verifyCode);
   $('signin-token').addEventListener('keydown', (e) => { if (e.key === 'Enter') verifyCode(); });
-  document.querySelectorAll('[data-fill-all]').forEach((b) => b.addEventListener('click', () => fillAll(b.dataset.fillAll)));
   $('ln-add').addEventListener('click', addGame);
   $('ln-espn').addEventListener('click', importSchedule);
   $('ln-scores').addEventListener('click', importScores);
