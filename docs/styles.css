@@ -242,3 +242,8 @@ input[type=email], input[type=number], input[type=datetime-local], .lines-tbl se
 .gc-panel { overflow-x: auto; }
 
 .gc-when { min-width: 0; }
+
+/* Space between the My picks controls and the first game */
+#picks-app #pk-games { margin-top: 18px; }
+#picks-app #pk-for-note { margin-top: 18px; }
+.kick-text { white-space: nowrap; font-size: .9rem; }

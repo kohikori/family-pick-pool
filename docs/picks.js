@@ -426,6 +426,9 @@
       const tr = el('tr');
       const history = !g.kickoff && g.legacy_winner;
       const kick = el('input'); kick.type = 'datetime-local'; kick.value = toLocalInput(g.kickoff);
+      // Kickoff times come from ESPN; they're shown as text unless "Edit kickoff times" is on.
+      const kickText = el('span', g.kickoff ? fmtKick(g.kickoff) : 'Not set', 'kick-text');
+      kick.hidden = !st.lnEditKick; kickText.hidden = !!st.lnEditKick;
       const fav = el('select'); fav.append(new Option('—', ''), new Option(g.away, g.away), new Option(g.home, g.home)); fav.value = g.favorite || '';
       const num = (v, step) => { const i = el('input'); i.type = 'number'; i.step = step; i.min = '0'; i.inputMode = 'decimal'; i.value = v == null ? '' : Number(v); i.className = 'num-in'; return i; };
       const sp = num(g.spread, '0.5'), tot = num(g.total, '0.5'), as = num(g.away_score, '1'), hs = num(g.home_score, '1');
@@ -471,7 +474,7 @@
         Object.assign(g, changed);
         say('Saved ✓', 'ok');
         setTimeout(() => { if (msg.textContent === 'Saved ✓') { msg.classList.add('fade'); setTimeout(() => { if (msg.textContent === 'Saved ✓') say(''); }, 600); } }, 2500);
-        if ('kickoff' in changed) scoreLock();
+        if ('kickoff' in changed) { scoreLock(); kickText.textContent = g.kickoff ? fmtKick(g.kickoff) : 'Not set'; }
         if ('home_score' in changed || 'away_score' in changed) P.reload(true);
       };
       const schedule = (delay) => { clearTimeout(timer); lnPending[g.id] = true; say('Editing…'); timer = setTimeout(saveRow, delay); };
@@ -487,7 +490,8 @@
       const gameTd = el('td', null, 'strong'); gameTd.append(el('div', g.away + ' @ ' + g.home), el('div', history ? 'from the spreadsheet' : '', 'note'));
       const td = (child) => { const c = el('td'); c.append(child); return c; };
       const last = el('td'); last.append(msg);
-      tr.append(gameTd, td(kick), td(fav), td(sp), td(tot), td(as), td(hs), last);
+      const kickTd = el('td'); kickTd.append(kick, kickText);
+      tr.append(gameTd, kickTd, td(fav), td(sp), td(tot), td(as), td(hs), last);
       return tr;
     }));
   }
@@ -577,6 +581,11 @@
   $('signin-token').addEventListener('keydown', (e) => { if (e.key === 'Enter') verifyCode(); });
   $('ln-add').addEventListener('click', addGame);
   $('ln-espn').addEventListener('click', importSchedule);
+  $('ln-kick').addEventListener('click', () => {
+    st.lnEditKick = !st.lnEditKick;
+    $('ln-kick').textContent = st.lnEditKick ? 'Done editing kickoffs' : 'Edit kickoff times';
+    drawLines();
+  });
   $('ln-scores').addEventListener('click', importScores);
   ['ln-add-away', 'ln-add-home'].forEach((id) => $(id).replaceChildren(new Option('Team', ''), ...TEAMS.map((t) => new Option(t, t))));
 
