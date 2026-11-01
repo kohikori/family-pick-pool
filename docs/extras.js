@@ -68,7 +68,12 @@
   }
   function qbLine(g) {
     const notes = (cache.qb[g.season + '-' + g.week] || []).filter((n) => n.team === g.away || n.team === g.home);
-    return notes.length ? '🏈 ' + notes.map((n) => n.team + ': ' + n.starter + ' starting at QB (in for ' + n.usual + ')').join(' · ') : null;
+    const text = (n) => {
+      const m = /^RETURNING:(\d+)$/.exec(n.usual || '');
+      if (m) return n.team + ': ' + n.starter + ' back at QB (missed ' + (m[1] === '1' ? 'the last game' : 'the last ' + m[1] + ' games') + ')';
+      return n.team + ': ' + n.starter + ' starting at QB (in for ' + n.usual + ')';
+    };
+    return notes.length ? '🏈 ' + notes.map(text).join(' · ') : null;
   }
 
   // ---------- public ----------
