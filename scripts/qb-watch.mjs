@@ -6,7 +6,7 @@
 //   • usual starter = the QB who led the team in passing in the most games this season (ESPN box scores)
 //   • this week's starter = QB1 on ESPN's depth chart (or, if that can't be read, last game's starter)
 // If this week's starter isn't the usual starter, and hasn't started as many games, the team gets a
-// note in the qb_notes table. The My picks cards show it as:
+// note in the qb_notes table. The usual starter returning after missing games gets a one-week note too. The My picks cards show it as:
 //   🏈 PHI: T. Pickett starting at QB (in for J. Hurts)
 //
 // Settings: SUPABASE_SECRET_KEY (required), SEASON / WEEK (optional overrides),
@@ -136,11 +136,13 @@ async function depthQBs(teamId) {
   console.log(`Reading ${finished.length} finished games…`);
   const starters = await pool(finished, 8, (e) => gameStarters(e.id).then((s) => ({week: e.week, s})));
   const tally = {};   // team -> {key -> {id, name, starts, last}}
+  const history = {}; // team -> [{week, p}] each game's starter, for "back from injury" notes
   let readable = 0;
   starters.forEach((r) => {
     if (!r || r.error || !r.s) return;
     if (Object.keys(r.s).length) readable++;
     Object.entries(r.s).forEach(([team, p]) => {
+      (history[team] = history[team] || []).push({week: r.week, p});
       const t = (tally[team] = tally[team] || {});
       const k = Object.keys(t).find((x) => same(t[x], p)) || (p.id || p.name);
       t[k] = t[k] || {...p, starts: 0, last: 0};
@@ -167,13 +169,20 @@ async function depthQBs(teamId) {
     if (!expected) { expected = lastStarter; source = 'last game'; }
     const known = list.find((p) => same(p, expected)) || {...expected, starts: 0};
     const flag = !same(known, usual) && known.starts < usual.starts;
-    console.log(`${t.code.padEnd(4)} usual ${usual.name} (${usual.starts})  this week ${known.name} (${known.starts}, ${source})${flag ? '  ← BACKUP' : ''}`);
+    // Usual starter back after missing the most recent game(s): note it for this week only.
+    const recent = (history[t.code] || []).slice().sort((a, b) => b.week - a.week);
+    let missed = 0;
+    for (const h of recent) { if (same(h.p, usual)) break; missed++; }
+    const back = !flag && same(known, usual) && missed > 0 && missed < recent.length;
+    console.log(`${t.code.padEnd(4)} usual ${usual.name} (${usual.starts})  this week ${known.name} (${known.starts}, ${source})${flag ? '  ← BACKUP' : back ? `  ← BACK (missed ${missed})` : ''}`);
     if (flag) notes.push({season, week, team: t.code, starter: known.name, usual: usual.name, updated_at: new Date().toISOString()});
+    // A returning starter is stored with usual = 'RETURNING:<games missed>' (no database change needed).
+    if (back) notes.push({season, week, team: t.code, starter: usual.name, usual: 'RETURNING:' + missed, updated_at: new Date().toISOString()});
   }
   if (!depthOK && depthErr) console.log('Depth charts unreadable, used last game\'s starter instead. ' + depthErr);
 
   // 3. Save: replace this week's notes.
   await api(`/qb_notes?season=eq.${season}&week=eq.${week}`, {method: 'DELETE', headers: {Prefer: 'return=minimal'}});
   if (notes.length) await api('/qb_notes', {method: 'POST', headers: {Prefer: 'return=minimal'}, body: JSON.stringify(notes)});
-  console.log(notes.length ? `Saved ${notes.length} backup-QB note(s): ` + notes.map((n) => `${n.team} ${n.starter} for ${n.usual}`).join('; ') : 'No backup QBs starting this week.');
+  console.log(notes.length ? `Saved ${notes.length} QB note(s): ` + notes.map((n) => (/^RETURNING:/.test(n.usual) ? `${n.team} ${n.starter} back` : `${n.team} ${n.starter} for ${n.usual}`)).join('; ') : 'No QB changes this week.');
 })().catch((e) => { console.error(e.message || e); process.exit(1); });
