@@ -67,7 +67,7 @@
       if (st.me.is_admin) await loadPlayers();
     }
     renderPicksPage();
-    if (P.state.tab === 'lines' && canSet) renderLines();
+    if (P.state.tab === 'lines' && canSet && !lnBusy()) renderLines();
   }
 
   function renderAccount() {
@@ -254,7 +254,7 @@
   }
 
   function gameCard(g) {
-    const isLocked = locked(g), hasLine = !!g.favorite;
+    const isLocked = locked(g), hasLine = !!g.favorite && g.spread != null && g.total != null;
     const d = st.draft[g.id] || {};
     const card = el('article', null, 'game-card' + (isLocked ? ' is-locked' : '') + (st.saved[g.id] ? ' is-saved' : ''));
     card.dataset.game = g.id;
@@ -411,6 +411,7 @@
 
   // Rows with an edit still waiting to save (so we can warn before leaving the page).
   const lnPending = {};
+  const lnBusy = () => Object.keys(lnPending).length > 0 || !!(document.activeElement && document.activeElement.closest && document.activeElement.closest('#ln-table'));
   window.addEventListener('beforeunload', (e) => { if (Object.keys(lnPending).length) { e.preventDefault(); e.returnValue = ''; } });
 
   // Each row's score-lock check; re-run every 30 seconds so boxes open right at kickoff.
@@ -453,7 +454,6 @@
       const saveRow = async (leaving) => {
         timer = null; delete lnPending[g.id];
         const editing = !leaving && tr.contains(document.activeElement);
-        const remind = (text) => say(editing ? 'Editing…' : text);
         const upd = {
           kickoff: fromLocalInput(kick.value),
           favorite: fav.value || null,
@@ -462,18 +462,24 @@
           away_score: as.value === '' ? null : Number(as.value),
           home_score: hs.value === '' ? null : Number(hs.value),
         };
-        if ((upd.away_score == null) !== (upd.home_score == null)) return remind('Enter both scores to save them.');
-        if (upd.favorite && (upd.spread == null || upd.total == null)) return remind('Add the spread and total to save the line.');
-        if (!upd.favorite && (upd.spread != null || upd.total != null)) return remind('Pick the favorite to save the line.');
+        // Every box saves on its own. A line only goes live for picks once favorite, spread and total are all set.
+        const missing = [!upd.favorite && 'favorite', upd.spread == null && 'spread', upd.total == null && 'total'].filter(Boolean);
+        const lineNote = missing.length && missing.length < 3 ? 'Saved. Add the ' + missing.join(' and ') + ' before anyone can pick.' : '';
+        const scoreNote = (upd.away_score == null) !== (upd.home_score == null) ? 'Saved. Add the other score to finish the game.' : '';
+        const note = lineNote || scoreNote;
         const norm = (k, v) => (v == null ? '' : k === 'kickoff' ? String(new Date(v).getTime()) : k === 'favorite' ? v : String(Number(v)));
         const changed = Object.fromEntries(Object.entries(upd).filter(([k, v]) => norm(k, v) !== norm(k, g[k])));
-        if (!Object.keys(changed).length) return say(msg.textContent === 'Editing…' ? '' : msg.textContent, msg.className.includes('ok') ? 'ok' : '');
+        const settle = () => {   // what the row says once it's saved
+          if (note && !editing) return say(note);
+          say('Saved ✓', 'ok');
+          setTimeout(() => { if (msg.textContent === 'Saved ✓') { msg.classList.add('fade'); setTimeout(() => { if (msg.textContent === 'Saved ✓') say(''); }, 600); } }, 2500);
+        };
+        if (!Object.keys(changed).length) { if (msg.textContent === 'Editing…' || (leaving && note)) settle(); return; }
         say('Saving…');
         const {error} = await db.from('games').update(changed).eq('id', g.id);
         if (error) return say(friendly(error), 'err');
         Object.assign(g, changed);
-        say('Saved ✓', 'ok');
-        setTimeout(() => { if (msg.textContent === 'Saved ✓') { msg.classList.add('fade'); setTimeout(() => { if (msg.textContent === 'Saved ✓') say(''); }, 600); } }, 2500);
+        settle();
         if ('kickoff' in changed) { scoreLock(); kickText.textContent = g.kickoff ? fmtKick(g.kickoff) : 'Not set'; }
         if ('home_score' in changed || 'away_score' in changed) P.reload(true);
       };
