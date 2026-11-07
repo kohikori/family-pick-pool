@@ -80,6 +80,10 @@
     const {data: recaps} = await db.from('recaps').select('*').eq('season', state.season);
     state.rows = rows;
     state.recaps = Object.fromEntries((recaps || []).map((r) => [r.week, r]));
+    // The current NFL week: the earliest week with a game that hasn't finished (kickoff less than 4 hours ago).
+    const {data: sched} = await db.from('games').select('week, kickoff').eq('season', state.season);
+    const live = (sched || []).filter((g) => g.kickoff && new Date(g.kickoff).getTime() > Date.now() - 4 * 3600e3);
+    state.currentWeek = live.length ? Math.min(...live.map((g) => g.week)) : null;
     // Secret ballot setting (picks hidden until kickoff). Assume it's on if the setting can't be read.
     const {data: ps, error: psErr} = await db.from('pool_settings').select('secret_ballot').eq('id', 1).maybeSingle();
     state.secretBallot = psErr || !ps ? true : !!ps.secret_ballot;
@@ -279,7 +283,10 @@
     const weeks = S.weeksOf(state.rows);
     const sel = $('week-sel');
     sel.replaceChildren(...weeks.map((w) => new Option(w.label, String(w.week))));
-    if (state.week == null || !weeks.some((w) => w.week === state.week)) state.week = (latestWeek() || weeks[weeks.length - 1] || {}).week;
+    if (state.week == null || !weeks.some((w) => w.week === state.week)) {
+      // Open on the week being played; if nobody has picked it yet, the most recent week with picks.
+      state.week = weeks.some((w) => w.week === state.currentWeek) ? state.currentWeek : (latestWeek() || weeks[weeks.length - 1] || {}).week;
+    }
     if (state.week == null) return;
     sel.value = String(state.week);
     sel.onchange = () => { state.week = Number(sel.value); renderWeek(); };
