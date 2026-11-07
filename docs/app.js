@@ -80,6 +80,9 @@
     const {data: recaps} = await db.from('recaps').select('*').eq('season', state.season);
     state.rows = rows;
     state.recaps = Object.fromEntries((recaps || []).map((r) => [r.week, r]));
+    // Secret ballot setting (picks hidden until kickoff). Assume it's on if the setting can't be read.
+    const {data: ps, error: psErr} = await db.from('pool_settings').select('secret_ballot').eq('id', 1).maybeSingle();
+    state.secretBallot = psErr || !ps ? true : !!ps.secret_ballot;
     const players = state.players.filter((p) => rows.some((r) => r.player_code === p));
     state.seasonPlayers = players.length ? players : state.players;
     state.wk = S.weekly(rows, state.seasonPlayers);
@@ -359,7 +362,7 @@
     state.openGames = state.openGames || {};
     $('games-table').tBodies[0].replaceChildren(...games.flatMap((g, i) => {
       const rows = groups[i] || [], id = rows[0] && rows[0].game_id;
-      const canOpen = !!(rows[0] && rows[0].is_locked);
+      const canOpen = !!(rows[0] && (rows[0].is_locked || state.secretBallot === false));
       const open = canOpen && state.openGames[id];
       const tr = el('tr', null, canOpen ? 'clickable' : '');
       const name = el('td', null, 'strong');

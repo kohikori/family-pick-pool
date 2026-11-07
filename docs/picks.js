@@ -319,7 +319,7 @@
     else if (unlocked && st.saved[g.id]) { text = 'Commissioner edit: changes save right away'; kind = 'ok'; }
     else if (stt) { text = stt.text; kind = stt.kind; }
     else if (st.saved[g.id]) { text = 'Saved ✓'; kind = 'ok'; }
-    else if (isLocked) { text = st.target === st.me.code ? 'No pick made' : 'No pick (or hidden)'; kind = 'muted'; }
+    else if (isLocked) { text = st.target === st.me.code || window.POOL.state.secretBallot === false ? 'No pick made' : 'No pick (or hidden)'; kind = 'muted'; }
     else { const left = ['w', 's', 'o'].filter((k) => !d[k]).length; text = left === 3 ? 'Not picked yet' : 'Pick ' + left + ' more to save'; kind = 'todo'; }
     foot.append(el('span', text, 'gc-status ' + kind));
     if (isLocked && isAdmin && g.favorite) {
@@ -329,7 +329,8 @@
       foot.append(b);
     }
     const who = st.submitted[g.id] || [];
-    if (isLocked && window.POOL.picksPanel) {
+    const openBallot = window.POOL.state.secretBallot === false;   // picks visible before kickoff
+    if ((isLocked || openBallot) && window.POOL.picksPanel) {
       const open = !!st.panelOpen[g.id];
       const b = el('button', (open ? '▾ Hide picks' : '▸ See everyone’s picks'), 'linkbtn gc-who');
       b.type = 'button';

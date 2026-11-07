@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261104a">
+<link rel="stylesheet" href="styles.css?v=20261107a">
 </head>
 <body>
 <div class="wrap">
@@ -183,7 +183,7 @@
           </span>
           <span class="note" id="pk-progress"></span>
         </div>
-        <p class="note warn" id="pk-for-note" hidden>You're entering picks for someone else. Their picks for games that haven't started stay hidden (secret ballot), so anything you save here replaces whatever they had.</p>
+        <p class="note warn" id="pk-for-note" hidden>You're entering picks for someone else. Anything you save here replaces their pick for that game.</p>
         <div id="pk-games" class="games"></div>
       </div>
     </section>
@@ -234,11 +234,11 @@
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="config.js?v=20261104a"></script>
-<script src="scoring.js?v=20261104a"></script>
-<script src="app.js?v=20261104a"></script>
-<script src="extras.js?v=20261104a"></script>
-<script src="picks.js?v=20261104a"></script>
+<script src="config.js?v=20261107a"></script>
+<script src="scoring.js?v=20261107a"></script>
+<script src="app.js?v=20261107a"></script>
+<script src="extras.js?v=20261107a"></script>
+<script src="picks.js?v=20261107a"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   (function () {
