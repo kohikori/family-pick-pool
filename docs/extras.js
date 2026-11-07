@@ -1,6 +1,7 @@
 // Family Pick Pool: game-day notes on the My picks cards.
 //   • Weather: only notable conditions at outdoor stadiums (Open-Meteo, free, no key).
 //   • Backup QB: when a team's usual starter isn't starting (saved by the "QB watch" GitHub job).
+//   • International games: a flag (or ✈️) next to the kickoff time, from ESPN's schedule.
 // Everything here is best-effort: if a source is down, cards simply show nothing extra.
 (function () {
   // Outdoor stadiums only (domes, retractable roofs and SoFi are left out on purpose).
@@ -15,7 +16,7 @@
   // When it counts as "notable".
   const T = {wind: 15, gust: 30, cold: 25, hot: 90, rainChance: 60, rainIn: 0.1, heavyRainIn: 0.4, snowIn: 0.2};
   const TTL = 30 * 60 * 1000;           // refresh at most every 30 minutes
-  const cache = {weather: {}, qb: {}, at: {}};
+  const cache = {weather: {}, qb: {}, venue: {}, at: {}};
 
   const fresh = (k) => cache.at[k] && Date.now() - cache.at[k] < TTL;
   const getJSON = async (url) => { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); };
@@ -76,9 +77,45 @@
     return notes.length ? '🏈 ' + notes.map(text).join(' · ') : null;
   }
 
+  // ---------- international games (ESPN schedule) ----------
+  // A game outside the US by ESPN's venue country, whether or not it's marked neutral-site.
+  const FLAGS = {
+    'united kingdom': '🇬🇧', england: '🇬🇧', uk: '🇬🇧', scotland: '🇬🇧', wales: '🇬🇧', ireland: '🇮🇪',
+    germany: '🇩🇪', mexico: '🇲🇽', brazil: '🇧🇷', spain: '🇪🇸', france: '🇫🇷', italy: '🇮🇹',
+    australia: '🇦🇺', canada: '🇨🇦', japan: '🇯🇵', netherlands: '🇳🇱', 'south korea': '🇰🇷',
+  };
+  const US = /^(usa|us|united states|united states of america)$/i;
+  const ESPN_FIX = {WSH: 'WAS'};
+  const code = (a) => { const x = String(a || '').toUpperCase(); return ESPN_FIX[x] || x; };
+  const weekParams = (w) => (w <= 18 ? 'seasontype=2&week=' + w : 'seasontype=3&week=' + ({19: 1, 20: 2, 21: 3, 22: 5}[w] || w - 18));
+  async function loadVenues(season, week) {
+    const k = season + '-' + week;
+    if (cache.venue[k] && Date.now() - (cache.at['v' + k] || 0) < 6 * 3600e3) return;
+    cache.at['v' + k] = Date.now();
+    const j = await getJSON('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=' + season + '&' + weekParams(week));
+    const map = {};
+    (j.events || []).forEach((ev) => {
+      const c = (ev.competitions || [])[0] || {};
+      const side = (h) => (c.competitors || []).find((x) => x.homeAway === h) || {};
+      const addr = (c.venue || {}).address || {};
+      const country = String(addr.country || '').trim();
+      if (!country || US.test(country)) return;
+      map[code((side('away').team || {}).abbreviation) + '@' + code((side('home').team || {}).abbreviation)] =
+        {flag: FLAGS[country.toLowerCase()] || '✈️', place: [(c.venue || {}).fullName, addr.city, country].filter(Boolean).join(', ')};
+    });
+    cache.venue[k] = map;
+  }
+  // {flag, place} for a game played outside the US, else null.
+  function venue(g) {
+    const m = cache.venue[g.season + '-' + g.week];
+    return (m && (m[g.away + '@' + g.home] || m[g.home + '@' + g.away])) || null;
+  }
+
   // ---------- public ----------
   // Loads notes for the open (not yet kicked off) games and calls onUpdate(game) as each arrives.
   async function load(games, season, onUpdate) {
+    // International games: one ESPN schedule request per week (cached for 6 hours).
+    if (games.length) loadVenues(games[0].season || season, games[0].week).then(() => games.filter(venue).forEach(onUpdate)).catch(() => {});
     const open = games.filter((g) => g.kickoff && new Date(g.kickoff) > new Date());
     if (!open.length) return;
     open.forEach((g) => {
@@ -93,5 +130,5 @@
     if (!g.kickoff || new Date(g.kickoff) <= new Date()) return [];
     return [qbLine(g), cache.weather[g.id]].filter(Boolean);
   }
-  window.PoolExtras = {load, lines};
+  window.PoolExtras = {load, lines, venue};
 })();

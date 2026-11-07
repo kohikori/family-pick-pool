@@ -132,6 +132,11 @@
       .eq('season', SEASON).order('week').order('kickoff', {nullsFirst: true}).order('game_no');
     if (error) throw error;
     st.games = data;
+    // Secret ballot setting, read here too so cards don't depend on the other tabs having loaded first.
+    if (P.state.secretBallot == null) {
+      const {data: ps, error: psErr} = await db.from('pool_settings').select('secret_ballot').eq('id', 1).maybeSingle();
+      P.state.secretBallot = psErr || !ps ? true : !!ps.secret_ballot;
+    }
   }
 
   async function loadPlayers() {
@@ -215,7 +220,17 @@
     lines.forEach((t) => box.append(el('div', t, 'gc-note')));
     return box;
   }
+  // Small flag (or ✈️) for games played outside the US; hover/long-press shows where.
+  function venueBadge(g) {
+    const v = window.PoolExtras && window.PoolExtras.venue(g);
+    const b = el('span', v ? v.flag : '', 'gc-flag');
+    b.dataset.venue = g.id;
+    if (v) { b.title = 'Played in ' + v.place; b.setAttribute('aria-label', 'Played in ' + v.place); } else b.hidden = true;
+    return b;
+  }
   function updateNotes(g) {
+    const vb = document.querySelector('[data-venue="' + g.id + '"]');
+    if (vb) vb.replaceWith(venueBadge(g));
     const old = document.querySelector('[data-notes="' + g.id + '"]');
     if (old) old.replaceWith(notesFor(g));
   }
@@ -265,7 +280,9 @@
     teams.append(logo(g.away), document.createTextNode(g.away + ' @ '), logo(g.home), document.createTextNode(g.home));
     title.append(teams);
     const when = el('div', null, 'gc-when');
-    when.append(el('span', g.kickoff ? fmtKick(g.kickoff) : '', 'gc-kick'), el('span', g.kickoff ? (isLocked ? '🔒 Locked' : untilText(g.kickoff)) : '🔒 Locked', isLocked ? 'gc-lock' : 'gc-until'));
+    const kickLine = el('span', null, 'gc-kick');
+    kickLine.append(venueBadge(g), document.createTextNode(g.kickoff ? fmtKick(g.kickoff) : ''));
+    when.append(kickLine, el('span', g.kickoff ? (isLocked ? '🔒 Locked' : untilText(g.kickoff)) : '🔒 Locked', isLocked ? 'gc-lock' : 'gc-until'));
     head.append(title, when);
     card.append(head);
     card.append(notesFor(g));

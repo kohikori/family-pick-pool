@@ -247,3 +247,6 @@ input[type=email], input[type=number], input[type=datetime-local], .lines-tbl se
 #picks-app #pk-games { margin-top: 18px; }
 #picks-app #pk-for-note { margin-top: 18px; }
 .kick-text { white-space: nowrap; font-size: .9rem; }
+
+/* International game flag next to the kickoff time */
+.gc-flag { margin-right: 6px; font-size: 1rem; cursor: help; }
