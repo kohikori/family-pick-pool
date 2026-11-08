@@ -81,8 +81,9 @@
     state.rows = rows;
     state.recaps = Object.fromEntries((recaps || []).map((r) => [r.week, r]));
     // The current NFL week: the earliest week with a game that hasn't finished (kickoff less than 4 hours ago).
-    const {data: sched} = await db.from('games').select('week, kickoff').eq('season', state.season);
-    const live = (sched || []).filter((g) => g.kickoff && new Date(g.kickoff).getTime() > Date.now() - 4 * 3600e3);
+    const {data: sched} = await db.from('game_results').select('week, kickoff, is_final').eq('season', state.season);
+    state.sched = sched || [];
+    const live = state.sched.filter((g) => g.kickoff && new Date(g.kickoff).getTime() > Date.now() - 4 * 3600e3);
     state.currentWeek = live.length ? Math.min(...live.map((g) => g.week)) : null;
     // Secret ballot setting (picks hidden until kickoff). Assume it's on if the setting can't be read.
     const {data: ps, error: psErr} = await db.from('pool_settings').select('secret_ballot').eq('id', 1).maybeSingle();
@@ -113,10 +114,14 @@
   }
   function latestWeek() { const d = completedWeeks(); return d.length ? d[d.length - 1] : null; }
   // A week is final when every game in it has a result.
-  function weekIsFinal(week) {
+  // Counts every scheduled game in the week, not just the ones with picks.
+  function weekCounts(week) {
+    const sched = (state.sched || []).filter((g) => g.week === week);
+    if (sched.length) return {total: sched.length, final: sched.filter((g) => g.is_final).length};
     const g = S.gameResults(state.rows, week);
-    return g.length > 0 && g.every((x) => x.final);
+    return {total: g.length, final: g.filter((x) => x.final).length};
   }
+  function weekIsFinal(week) { const c = weekCounts(week); return c.total > 0 && c.final === c.total; }
   function lastFinalWeek() { const d = completedWeeks().filter((w) => weekIsFinal(w.week)); return d.length ? d[d.length - 1] : null; }
 
   function renderHeader() {
@@ -292,10 +297,10 @@
     sel.onchange = () => { state.week = Number(sel.value); renderWeek(); };
     const label = (weeks.find((w) => w.week === state.week) || {}).label || '';
     const games = S.gameResults(state.rows, state.week);
-    const nFinal = games.filter((g) => g.final).length;
-    const status = nFinal === games.length ? 'Final' : nFinal ? 'In progress' : 'Upcoming';
+    const wc = weekCounts(state.week), nFinal = wc.final;
+    const status = wc.total && nFinal === wc.total ? 'Final' : nFinal ? 'In progress' : 'Upcoming';
     const pill = $('week-status'); pill.textContent = status; pill.className = 'pill ' + status.toLowerCase().replace(' ', '-');
-    set('week-count', nFinal + ' of ' + games.length + ' games final');
+    set('week-count', nFinal + ' of ' + wc.total + ' games final');
 
     // tiles
     const ww = state.wk.filter((r) => r.week === state.week).sort((a, b) => b.points - a.points || b.sweeps - a.sweeps);
