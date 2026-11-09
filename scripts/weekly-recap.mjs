@@ -134,6 +134,90 @@ function buildFacts(rows, season, week) {
 }
 
 // ---------- writing ----------
+// ---------- storylines ----------
+// Special conditions worth leading with. Each returns {key, rank, title, text} or nothing.
+// history: every final pick row from all seasons: {season, week, player_code, points}.
+function findStorylines(f, rows, history) {
+  const out = [];
+  const s = f.week_scores.filter((r) => r.games_picked > 0);
+  if (!s.length) return out;
+  const top = s.filter((r) => r.points === s[0].points), topNames = names(top.map((r) => r.player));
+  // weekly totals per player from history, leaving out this week
+  const weekly = {};
+  history.forEach((r) => {
+    if (r.season === f.season && r.week === f.week) return;
+    const k = r.season + '|' + r.week + '|' + r.player_code;
+    weekly[k] = (weekly[k] || 0) + Number(r.points || 0);
+  });
+  const past = Object.entries(weekly).map(([k, pts]) => { const [season, week, player] = k.split('|'); return {season: +season, week: +week, player, pts}; });
+  const weekName = (r) => (r.week <= 18 ? 'Week ' + r.week : ({19: 'Wild Card weekend', 20: 'the Divisional round', 21: 'Championship weekend', 22: 'the Super Bowl'}[r.week] || 'Week ' + r.week)) + ' of ' + r.season;
+
+  // 1. Single-week record (all seasons)
+  if (past.length) {
+    const best = Math.max(...past.map((r) => r.pts));
+    const holders = past.filter((r) => r.pts === best);
+    const was = holders.map((r) => `${r.player} in ${weekName(r)}`).join(' and ');
+    const bonusNote = holders.every((r) => r.season < 2025) ? ' The old record came before sweep bonuses, which started in 2025.' : '';
+    if (s[0].points > best) out.push({key: 'record', rank: 100, title: `${f.label}: ${topNames} ${top.length > 1 ? 'set' : 'sets'} a new single-week record`,
+      text: `Record: ${topNames} scored ${s[0].points} points, the most in a single week in pool history. The old mark was ${best}, set by ${was}.${bonusNote}`});
+    else if (s[0].points === best) out.push({key: 'record', rank: 90, title: `${f.label}: ${topNames} ${top.length > 1 ? 'tie' : 'ties'} the single-week record`,
+      text: `Record: ${topNames}'s ${s[0].points} points tie the most ever scored in a single week, matching ${was}.`});
+  }
+
+  // 2 & 3. The whole pool had a big (or rough) week, compared with earlier weeks this season.
+  const wk = S.weekly(rows, [...new Set(rows.map((r) => r.player_code))]).filter((r) => r.week < f.week && r.games > 0);
+  if (wk.length >= 3) {
+    const avg = wk.reduce((a, r) => a + r.points, 0) / wk.length;
+    const perGame = wk.reduce((a, r) => a + r.points, 0) / wk.reduce((a, r) => a + r.games, 0);
+    const nowPerGame = s.reduce((a, r) => a + r.points, 0) / s.reduce((a, r) => a + r.games_picked, 0);
+    const combined = s.reduce((a, r) => a + r.points, 0);
+    const byWeek = {}; wk.forEach((r) => { byWeek[r.week] = (byWeek[r.week] || 0) + r.points; });
+    const bestWeek = Object.entries(byWeek).sort((a, b) => b[1] - a[1])[0];
+    const worstWeek = Object.entries(byWeek).sort((a, b) => a[1] - b[1])[0];
+    const a1 = avg.toFixed(1);
+    if (s.every((r) => r.points > avg) && nowPerGame >= perGame * 1.1) {
+      const seasonHigh = bestWeek && combined > bestWeek[1] ? ` The pool combined for ${combined} points, its best week of the season (the previous best was ${bestWeek[1]} in Week ${bestWeek[0]}).` : ` The pool combined for ${combined} points.`;
+      out.push({key: 'pool-big', rank: 80, title: `${f.label}: a banner week for the whole pool`,
+        text: `Big week for everyone: every player beat the season's average of ${a1} points a week.${seasonHigh}`});
+    } else if (s.every((r) => r.points < avg) && nowPerGame <= perGame * 0.9) {
+      const seasonLow = worstWeek && combined < worstWeek[1] ? ` The pool's ${combined} combined points are the fewest of any week this season.` : '';
+      out.push({key: 'pool-rough', rank: 30, title: `${f.label}: the week that humbled everyone`,
+        text: `Tough week all around: every player finished under the season's average of ${a1} points a week.${seasonLow}`});
+    }
+  }
+
+  // 4. Personal bests (at least 5 earlier weeks on record)
+  const pbs = s.map((r) => {
+    const mine = past.filter((x) => x.player === r.player);
+    if (mine.length < 5) return null;
+    const best = Math.max(...mine.map((x) => x.pts));
+    return r.points > best ? {player: r.player, points: r.points, best} : null;
+  }).filter(Boolean).filter((x) => !(out.some((o) => o.key === 'record') && top.some((t) => t.player === x.player)));
+  if (pbs.length) out.push({key: 'personal-best', rank: 40, title: `${f.label}: a career week for ${names(pbs.map((x) => x.player))}`,
+    text: pbs.length === 1 ? `Personal best: ${pbs[0].player}'s ${pbs[0].points} points are the most they've ever scored in a week (previous best ${pbs[0].best}).`
+      : `Personal bests: ${pbs.map((x) => `${x.player} with ${x.points} (previous best ${x.best})`).join('; ')}.`});
+
+  // 5. Shake-up at the top
+  const st = f.standings_after_week, leaders = st.filter((r) => r.points === st[0].points).map((r) => r.player);
+  const before = f.week_scores.filter((r) => r.rank_before === 1).map((r) => r.player);
+  if (leaders.length > 1) out.push({key: 'tie-top', rank: 60, title: `${f.label}: a tie at the top`,
+    text: `Tied at the top: ${names(leaders)} share first place with ${st[0].points} points.`});
+  else if (before.length && !before.includes(leaders[0])) {
+    const next = st.find((r) => r.points < st[0].points);
+    out.push({key: 'new-leader', rank: 60, title: `${f.label}: ${leaders[0]} takes over first place`,
+      text: `New leader: ${leaders[0]} moves into first place with ${st[0].points} points${next ? `, ${st[0].points - next.points} ahead of ${next.player}` : ''}.`});
+  }
+
+  // 6. Hot streak: won this week and the week(s) right before
+  const winnersOf = (w) => { const ws = wk.filter((r) => r.week === w); const m = Math.max(...ws.map((r) => r.points)); return ws.filter((r) => r.points === m).map((r) => r.player); };
+  const weeks = [...new Set(wk.map((r) => r.week))].sort((a, b) => b - a);
+  const streaks = top.map((t) => { let n = 1; for (const w of weeks) { if (winnersOf(w).includes(t.player)) n++; else break; } return {player: t.player, n}; }).filter((x) => x.n >= 2);
+  if (streaks.length) { const x = streaks.sort((a, b) => b.n - a.n)[0];
+    out.push({key: 'streak', rank: 50, title: `${f.label}: ${x.player} makes it ${x.n} in a row`, text: `Hot streak: ${x.player} has now won ${x.n} weeks in a row.`}); }
+
+  return out.sort((a, b) => b.rank - a.rank);
+}
+
 function templateRecap(f) {
   const s = f.week_scores;
   if (!s.length) return {title: f.label + ' recap', body: 'No picks were recorded on the site for ' + f.label + '.'};
@@ -144,18 +228,24 @@ function templateRecap(f) {
   const sliders = s.filter((r) => r.rank_before && r.rank_after > r.rank_before).map((r) => `${r.player} (down to ${ordinal(r.rank_after)})`);
   const lead = f.standings_after_week[0], next = f.standings_after_week.find((r) => r.points < lead.points);
   const p = [];
+  const stories = f.storylines || [];
+  if (stories.length) p.push(stories.map((x) => x.text).join(' '));
   p.push(`${names(top.map((r) => r.player))} ${top.length > 1 ? 'shared' : 'took'} ${f.label} with ${s[0].points} points` +
     (second ? `, ${s[0].points - second.points} ahead of ${second.player} (${second.points})` : '') +
     `. ${f.sweeps.startsWith('Nobody') ? 'Nobody went 3-for-3 on a single game.' : 'Most sweeps: ' + f.sweeps + '.'}`);
-  const upset = f.biggest_upset === 'None this week' ? 'The favorites all held up straight up.' : 'Biggest upset: ' + f.biggest_upset;
+  let upsetText = f.biggest_upset;
+  const called = (upsetText.match(/Called by (.+?)\.?$/) || [])[1];
+  if (called && called.split(/\s*&\s*|,\s*/).length >= s.length) upsetText = upsetText.replace(/Called by .+$/, 'Everyone saw it coming.');
+  const upset = f.biggest_upset === 'None this week' ? 'The favorites all held up straight up.' : 'Biggest upset: ' + upsetText;
   const lone = f.lone_correct_calls[0] === 'None this week' ? '' : ' Lone correct calls: ' + f.lone_correct_calls.slice(0, 3).join('; ') + (f.lone_correct_calls.length > 3 ? `, and ${f.lone_correct_calls.length - 3} more` : '') + '.';
   const missed = f.everyone_missed[0] === 'None this week' ? '' : ' Nobody saw this coming: ' + f.everyone_missed.join('; ') + '.';
   p.push(upset + lone + missed);
   p.push(`${lead.player} leads the season with ${lead.points} points` + (next ? `, ${lead.points - next.points} ahead of ${next.player}` : '') + '.' +
     (climbers.length ? ' Moving up: ' + climbers.join(', ') + '.' : '') + (sliders.length ? ' Sliding: ' + sliders.join(', ') + '.' : ''));
-  if (low && low.points < s[0].points) p.push(`A week to forget for ${low.player} (${low.points} points). There's always next week.`);
+  if (low && low.points < s[0].points && !stories.some((x) => x.key === 'pool-big')) p.push(`A week to forget for ${low.player} (${low.points} points). There's always next week.`);
   if (f.players_without_picks_on_site.length) p.push(`No picks on the site this week for ${names(f.players_without_picks_on_site)}.`);
-  return {title: `${f.label}: ${names(top.map((r) => r.player))} ${top.length > 1 ? 'share the top spot' : 'takes the week'}`, body: p.join('\n\n')};
+  const title = stories.length ? stories[0].title : `${f.label}: ${names(top.map((r) => r.player))} ${top.length > 1 ? 'share the top spot' : 'takes the week'}`;
+  return {title, body: p.join('\n\n')};
 }
 const names = (a) => (a.length <= 2 ? a.join(' & ') : a.slice(0, -1).join(', ') + ' & ' + a[a.length - 1]);
 const ordinal = (k) => k + (k % 10 === 1 && k !== 11 ? 'st' : k % 10 === 2 && k !== 12 ? 'nd' : k % 10 === 3 && k !== 13 ? 'rd' : 'th');
@@ -170,7 +260,7 @@ ${JSON.stringify(f, null, 1)}
 Write a short, fun recap for the family:
 - 3 or 4 short paragraphs, 150 to 230 words in total. Plain text, no markdown, no bullet points, at most one emoji.
 - Refer to players only by their codes exactly as written (e.g. "CGF II"). Never use he, she, him, her, his or hers for a player; use their code or "they".
-- Lead with who won the week and by how much. Mention sweeps, the biggest upset and any lone correct call. Close with the season standings and who moved up or down.
+- If storylines is not empty, lead with them (they are the week's headline: records, everyone's big week, a new leader, streaks); otherwise lead with who won the week and by how much. Mention sweeps, the biggest upset and any lone correct call. Close with the season standings and who moved up or down.
 - Light, friendly ribbing is good; nothing mean. If players_without_picks_on_site is not empty, mention briefly that their picks weren't on the site this week.
 - Also write a punchy title of at most 8 words.
 
@@ -218,7 +308,14 @@ async function emailRecap(season, facts, recap) {
   const loadFacts = async () => {
     const rows = await getAll(`/pick_scores?select=*&season=eq.${season}&order=week,game_no`);
     rows.forEach((r) => { r.week = Number(r.week); r.game_no = Number(r.game_no); });
-    return buildFacts(rows, season, week);
+    const facts = buildFacts(rows, season, week);
+    try {
+      const history = await getAll('/pick_scores?select=season,week,player_code,points&is_final=is.true&order=season,week,game_no');
+      history.forEach((r) => { r.season = Number(r.season); r.week = Number(r.week); });
+      facts.storylines = findStorylines(facts, rows.filter((r) => r.week <= week), history);
+      if (facts.storylines.length) console.log('Storylines: ' + facts.storylines.map((x) => x.key).join(', '));
+    } catch (e) { console.log('Storylines skipped: ' + e.message); facts.storylines = []; }
+    return facts;
   };
 
   if (RESEND) {
