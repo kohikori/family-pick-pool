@@ -70,7 +70,8 @@ async function pickSeasonAndWeek() {
   let week = Number(env.WEEK) || null;
   if (!week) {
     const now = Date.now();
-    const started = games.filter((g) => !g.kickoff || new Date(g.kickoff).getTime() <= now).map((g) => g.week);
+    // A game with no kickoff time only counts if it's already finished (imported history).
+    const started = games.filter((g) => (g.kickoff ? new Date(g.kickoff).getTime() <= now : g.legacy_winner != null || g.home_score != null)).map((g) => g.week);
     week = started.length ? Math.max(...started) : null;
   }
   return {season, week, games};
@@ -80,7 +81,7 @@ async function pickSeasonAndWeek() {
 const ESPN_FIX = {WSH: 'WAS'};
 async function updateScores(season, week, games) {
   if (SKIP_SCORES || week > 18) return 0;
-  const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${season}&seasontype=2&week=${week}`;
+  const url = `${env.ESPN_BASE || 'https://site.api.espn.com/apis/site/v2/sports/football/nfl'}/scoreboard?dates=${season}&seasontype=2&week=${week}`;
   let data;
   try { data = await (await fetch(url)).json(); } catch (e) { console.log('ESPN unavailable:', e.message); return 0; }
   let n = 0;
@@ -90,9 +91,11 @@ async function updateScores(season, week, games) {
     const side = (h) => c.competitors.find((x) => x.homeAway === h);
     const code = (x) => { const a = x.team.abbreviation.toUpperCase(); return ESPN_FIX[a] || a; };
     const away = code(side('away')), home = code(side('home'));
-    const g = games.find((x) => x.week === week && x.away === away && x.home === home);
-    if (!g) continue;
-    const as = Number(side('away').score), hs = Number(side('home').score);
+    // Match the two teams either way round (neutral-site and hand-entered games can be flipped).
+    const g = games.find((x) => x.week === week && ((x.away === away && x.home === home) || (x.away === home && x.home === away)));
+    if (!g) { console.log(`ESPN game ${away} @ ${home} isn't on the site for week ${week}.`); continue; }
+    const score = {[away]: Number(side('away').score), [home]: Number(side('home').score)};
+    const as = score[g.away], hs = score[g.home];
     if (g.away_score === as && g.home_score === hs) continue;
     await api(`/games?id=eq.${g.id}`, {method: 'PATCH', body: JSON.stringify({away_score: as, home_score: hs}), headers: {Prefer: 'return=minimal'}});
     n++;
@@ -336,7 +339,8 @@ async function emailRecap(season, facts, recap) {
   facts.games_total = status.length;
   facts.games_final = status.filter((g) => g.is_final).length;
   if (facts.games_final < facts.games_total && !FORCE) {
-    console.log(`Week ${week}: ${facts.games_final} of ${facts.games_total} games final. Waiting for the rest; a later run will try again.`);
+    const open = await api(`/game_results?select=away,home&season=eq.${season}&week=eq.${week}&is_final=is.false`);
+    console.log(`Week ${week}: ${facts.games_final} of ${facts.games_total} games final (no score yet: ${open.map((g) => g.away + ' @ ' + g.home).join(', ')}). Waiting for the rest; a later run will try again.`);
     return;
   }
   if (!facts.week_scores.some((r) => r.games_picked > 0)) { console.log(`No scored picks for week ${week}. Nothing to recap.`); return; }
