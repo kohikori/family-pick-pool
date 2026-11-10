@@ -584,9 +584,12 @@
       const wk = st.games.filter((g) => g.week === st.lnWeek);
       let n = 0;
       for (const e of evs) {
-        const g = wk.find((x) => x.away === e.away && x.home === e.home);
-        if (!g || (g.away_score === e.awayScore && g.home_score === e.homeScore)) continue;
-        const {error} = await db.from('games').update({away_score: e.awayScore, home_score: e.homeScore}).eq('id', g.id);
+        // Match the two teams either way round, and give each team its own score.
+        const g = wk.find((x) => (x.away === e.away && x.home === e.home) || (x.away === e.home && x.home === e.away));
+        if (!g) continue;
+        const score = {[e.away]: e.awayScore, [e.home]: e.homeScore};
+        if (g.away_score === score[g.away] && g.home_score === score[g.home]) continue;
+        const {error} = await db.from('games').update({away_score: score[g.away], home_score: score[g.home]}).eq('id', g.id);
         if (error) throw error;
         n++;
       }
