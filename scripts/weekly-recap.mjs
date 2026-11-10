@@ -140,7 +140,7 @@ function buildFacts(rows, season, week) {
 // ---------- storylines ----------
 // Special conditions worth leading with. Each returns {key, rank, title, text} or nothing.
 // history: every final pick row from all seasons: {season, week, player_code, points}.
-function findStorylines(f, rows, history) {
+function findStorylines(f, rows, history, bonusBySeason = {}) {
   const out = [];
   const s = f.week_scores.filter((r) => r.games_picked > 0);
   if (!s.length) return out;
@@ -153,18 +153,31 @@ function findStorylines(f, rows, history) {
     weekly[k] = (weekly[k] || 0) + Number(r.points || 0);
   });
   const past = Object.entries(weekly).map(([k, pts]) => { const [season, week, player] = k.split('|'); return {season: +season, week: +week, player, pts}; });
+  // All-time comparisons only use seasons scored the same way (with or without the sweep bonus).
+  const hasBonus = (season) => Number(bonusBySeason[season] || 0) > 0;
+  const comparable = past.filter((r) => hasBonus(r.season) === hasBonus(f.season));
+  const sinceText = hasBonus(f.season) ? (() => { const first = Math.min(...Object.keys(bonusBySeason).filter(hasBonus).map(Number)); return isFinite(first) ? ` since sweep bonuses began in ${first}` : ''; })() : '';
   const weekName = (r) => (r.week <= 18 ? 'Week ' + r.week : ({19: 'Wild Card weekend', 20: 'the Divisional round', 21: 'Championship weekend', 22: 'the Super Bowl'}[r.week] || 'Week ' + r.week)) + ' of ' + r.season;
 
-  // 1. Single-week record (all seasons)
-  if (past.length) {
-    const best = Math.max(...past.map((r) => r.pts));
-    const holders = past.filter((r) => r.pts === best);
-    const was = holders.map((r) => `${r.player} in ${weekName(r)}`).join(' and ');
-    const bonusNote = holders.every((r) => r.season < 2025) ? ' The old record came before sweep bonuses, which started in 2025.' : '';
-    if (s[0].points > best) out.push({key: 'record', rank: 100, title: `${f.label}: ${topNames} ${top.length > 1 ? 'set' : 'sets'} a new single-week record`,
-      text: `Record: ${topNames} scored ${s[0].points} points, the most in a single week in pool history. The old mark was ${best}, set by ${was}.${bonusNote}`});
-    else if (s[0].points === best) out.push({key: 'record', rank: 90, title: `${f.label}: ${topNames} ${top.length > 1 ? 'tie' : 'ties'} the single-week record`,
-      text: `Record: ${topNames}'s ${s[0].points} points tie the most ever scored in a single week, matching ${was}.`});
+  // 1. Single-week records. This season's record is the main one; beating every comparable season
+  //    (all seasons with the sweep bonus) is bigger still. Either one leads the email.
+  const seasonPast = past.filter((r) => r.season === f.season);
+  if (seasonPast.length) {
+    const sBest = Math.max(...seasonPast.map((r) => r.pts));
+    const sWas = names(seasonPast.filter((r) => r.pts === sBest).map((r) => `${r.player} in ${r.week <= 18 ? 'Week ' + r.week : weekName(r)}`));
+    const older = comparable.filter((r) => r.season !== f.season);
+    const best = older.length ? Math.max(sBest, ...older.map((r) => r.pts)) : sBest;
+    const was = names(comparable.filter((r) => r.pts === best).map((r) => `${r.player} in ${weekName(r)}`));
+    const allTime = older.length > 0;
+    if (allTime && s[0].points > best) out.push({key: 'record', rank: 100, title: `${f.label}: ${topNames} ${top.length > 1 ? 'set' : 'sets'} a new pool record`,
+      text: `Pool record: ${topNames} scored ${s[0].points} points, the most in a single week${sinceText}. The old record was ${best}, set by ${was}.`});
+    else if (allTime && s[0].points === best) out.push({key: 'record', rank: 95, title: `${f.label}: ${topNames} ${top.length > 1 ? 'tie' : 'ties'} the pool record`,
+      text: `Pool record: ${topNames}'s ${s[0].points} points tie the most ever scored in a single week${sinceText}, matching ${was}.`});
+    else if (s[0].points > sBest) out.push({key: 'season-record', rank: 92, title: `${f.label}: ${topNames} ${top.length > 1 ? 'set' : 'sets'} a new single-week record`,
+      text: `Single-week record: ${topNames} scored ${s[0].points} points, the most in a week this season. The old record was ${sBest}, by ${sWas}.` +
+        (allTime ? ` The all-time mark${sinceText} is ${best}, by ${was}.` : '')});
+    else if (s[0].points === sBest) out.push({key: 'season-record', rank: 85, title: `${f.label}: ${topNames} ${top.length > 1 ? 'tie' : 'ties'} the single-week record`,
+      text: `Single-week record: ${topNames}'s ${s[0].points} points tie the season's best week, matching ${sWas}.`});
   }
 
   // 2 & 3. The whole pool had a big (or rough) week, compared with earlier weeks this season.
@@ -195,7 +208,7 @@ function findStorylines(f, rows, history) {
     if (mine.length < 5) return null;
     const best = Math.max(...mine.map((x) => x.pts));
     return r.points > best ? {player: r.player, points: r.points, best} : null;
-  }).filter(Boolean).filter((x) => !(out.some((o) => o.key === 'record') && top.some((t) => t.player === x.player)));
+  }).filter(Boolean).filter((x) => !(out.some((o) => o.key === 'record' || o.key === 'season-record') && top.some((t) => t.player === x.player)));
   if (pbs.length) out.push({key: 'personal-best', rank: 40, title: `${f.label}: a career week for ${names(pbs.map((x) => x.player))}`,
     text: pbs.length === 1 ? `Personal best: ${pbs[0].player}'s ${pbs[0].points} points are the most they've ever scored in a week (previous best ${pbs[0].best}).`
       : `Personal bests: ${pbs.map((x) => `${x.player} with ${x.points} (previous best ${x.best})`).join('; ')}.`});
@@ -315,7 +328,9 @@ async function emailRecap(season, facts, recap) {
     try {
       const history = await getAll('/pick_scores?select=season,week,player_code,points&is_final=is.true&order=season,week,game_no');
       history.forEach((r) => { r.season = Number(r.season); r.week = Number(r.week); });
-      facts.storylines = findStorylines(facts, rows.filter((r) => r.week <= week), history);
+      const seasons = await api('/seasons?select=season,sweep_bonus_points');
+      const bonusBySeason = Object.fromEntries(seasons.map((x) => [x.season, x.sweep_bonus_points]));
+      facts.storylines = findStorylines(facts, rows.filter((r) => r.week <= week), history, bonusBySeason);
       if (facts.storylines.length) console.log('Storylines: ' + facts.storylines.map((x) => x.key).join(', '));
     } catch (e) { console.log('Storylines skipped: ' + e.message); facts.storylines = []; }
     return facts;
