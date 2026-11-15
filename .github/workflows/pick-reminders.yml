@@ -1,0 +1,39 @@
+name: Pick reminders
+
+# Emails players who haven't picked a game that kicks off within the hour, and the commissioner
+# if a game kicking off soon has no line. Started every 15 minutes by the cron-job.org timer
+# (GitHub's own schedule is unreliable). Each game is only reminded once per player,
+# so extra runs never send duplicates.
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: 'Only remind this player (e.g. CGF II); blank = everyone'
+        required: false
+      dry_run:
+        description: 'Just list who would be emailed; send nothing'
+        type: boolean
+        default: false
+
+concurrency:
+  group: pick-reminders
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install the email library
+        run: npm install --no-save --no-package-lock nodemailer@6.9.16
+      - name: Check for missing picks and email reminders
+        run: node scripts/pick-reminders.mjs
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          ONLY: ${{ inputs.only }}
+          DRY_RUN: ${{ inputs.dry_run }}
