@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261110a">
+<link rel="stylesheet" href="styles.css?v=20261115a">
 </head>
 <body>
 <div class="wrap">
@@ -142,7 +142,13 @@
       </div>
 
       <div class="card">
-        <h2>Game results &amp; spread covers</h2>
+        <div class="card-head">
+          <h2>Game results &amp; spread covers</h2>
+          <div class="gt-actions" id="gt-actions" hidden>
+            <button class="btn small" type="button" id="gt-expand">Expand all</button>
+            <button class="btn small" type="button" id="gt-collapse">Collapse all</button>
+          </div>
+        </div>
         <div class="scroll"><table class="tbl" id="games-table">
           <thead><tr><th>Game</th><th>Line</th><th>Total</th><th>Winner</th><th>Covered</th><th>Over/Under</th><th>Picked winner</th></tr></thead>
           <tbody></tbody>
@@ -234,11 +240,11 @@
 <div class="tip" id="tip" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="config.js?v=20261110a"></script>
-<script src="scoring.js?v=20261110a"></script>
-<script src="app.js?v=20261110a"></script>
-<script src="extras.js?v=20261110a"></script>
-<script src="picks.js?v=20261110a"></script>
+<script src="config.js?v=20261115a"></script>
+<script src="scoring.js?v=20261115a"></script>
+<script src="app.js?v=20261115a"></script>
+<script src="extras.js?v=20261115a"></script>
+<script src="picks.js?v=20261115a"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   (function () {

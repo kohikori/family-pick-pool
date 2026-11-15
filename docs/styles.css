@@ -250,3 +250,9 @@ input[type=email], input[type=number], input[type=datetime-local], .lines-tbl se
 
 /* International game flag next to the kickoff time */
 .gc-flag { margin-right: 6px; font-size: 1rem; cursor: help; }
+
+/* Weekly results: Expand all / Collapse all beside the game results heading */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.card-head h2 { margin: 0; }
+.gt-actions { display: flex; gap: 8px; }
+.gt-actions[hidden] { display: none; }

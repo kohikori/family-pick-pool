@@ -372,6 +372,10 @@
     state.rows.filter((r) => r.week === state.week).forEach((r) => (byGame[r.game_id] = byGame[r.game_id] || []).push(r));
     const groups = Object.values(byGame).sort((a, b) => a[0].game_no - b[0].game_no);
     state.openGames = state.openGames || {};
+    state.openable = groups.filter((r) => r[0] && (r[0].is_locked || state.secretBallot === false)).map((r) => r[0].game_id);
+    $('gt-actions').hidden = !state.openable.length;
+    $('gt-expand').disabled = state.openable.every((id) => state.openGames[id]);
+    $('gt-collapse').disabled = !state.openable.some((id) => state.openGames[id]);
     $('games-table').tBodies[0].replaceChildren(...games.flatMap((g, i) => {
       const rows = groups[i] || [], id = rows[0] && rows[0].game_id;
       const canOpen = !!(rows[0] && (rows[0].is_locked || state.secretBallot === false));
@@ -516,6 +520,9 @@
   window.POOL.showTab = (name) => { showTab(name); history.replaceState(null, '', '#' + name); };
   window.POOL.reload = (quiet) => loadSeason(quiet);
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => { showTab(b.dataset.tab); history.replaceState(null, '', '#' + b.dataset.tab); }));
+  const setAllGames = (open) => { (state.openable || []).forEach((id) => (state.openGames[id] = open)); renderWeek(); };
+  $('gt-expand').addEventListener('click', () => setAllGames(true));
+  $('gt-collapse').addEventListener('click', () => setAllGames(false));
   const h = location.hash.slice(1).split('&')[0];
   const legacy = {standings: 'dashboard', recap: 'week'};
   if (['dashboard', 'week', 'stats', 'picks', 'lines', 'standings', 'recap'].includes(h)) showTab(legacy[h] || h);
