@@ -21,16 +21,19 @@
     };
     const order = players.concat(rows.map((r) => r.player_code).filter((p) => !players.includes(p)));
     const tbl = el('table', null, 'pk-panel');
-    const head = el('tr'); ['', 'Winner', 'Spread', 'O/U'].forEach((h) => head.append(el('th', h))); tbl.append(head);
+    const head = el('tr'); ['', 'Winner', 'Spread', 'O/U', ''].forEach((h) => head.append(el('th', h))); tbl.append(head);
     order.forEach((p) => {
       const r = rows.find((x) => x.player_code === p);
       if (!r && !players.includes(p)) return;
       const tr = el('tr'); tr.append(el('td', p, 'strong'));
-      if (!r) { const td = el('td', 'No pick', 'pend'); td.colSpan = 3; tr.append(td); tbl.append(tr); return; }
+      if (!r) { const td = el('td', 'No pick', 'pend'); td.colSpan = 4; tr.append(td); tbl.append(tr); return; }
       [['pick_winner', 'winner_pt', 'winner', 'Tie'], ['pick_spread', 'spread_pt', 'covered', 'Push'], ['pick_ou', 'ou_pt', 'over_under', 'Push']].forEach(([pick, pt, res, push]) => {
         const [m, cls] = mark(r, pt, res, push);
         const td = el('td'); td.append(document.createTextNode(r[pick])); if (m) td.append(el('span', m, cls)); tr.append(td);
       });
+      // Sweep: all three right.
+      const swept = r.is_final && ['winner_pt', 'spread_pt', 'ou_pt'].every((k) => Number(r[k]) === 1);
+      const sw = el('td', swept ? '🧹' : '', 'pk-sweep'); if (swept) sw.title = 'Sweep: winner, spread and over/under all right'; tr.append(sw);
       tbl.append(tr);
     });
     return tbl;

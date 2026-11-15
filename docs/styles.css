@@ -256,3 +256,4 @@ input[type=email], input[type=number], input[type=datetime-local], .lines-tbl se
 .card-head h2 { margin: 0; }
 .gt-actions { display: flex; gap: 8px; }
 .gt-actions[hidden] { display: none; }
+.pk-panel td.pk-sweep { padding-left: 2px; font-size: 1rem; line-height: 1; }
